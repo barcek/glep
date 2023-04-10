@@ -1,0 +1,47 @@
+#!/usr/bin/awk -f
+
+# glep v 1.0.0
+# ©2023 barcek
+# License: MIT
+# @ github.com
+# /barcek/glep
+
+
+# Operates via several invocations,
+# each representing a single stage,
+# each bar no. 3 invoking the next:
+# 1. 'list' (invokes no. 2)
+# 2. 'grep' (invokes no. 3)
+# 3. 'echo'
+
+BEGIN { # primarily for list stage
+
+  dir_r = "../"
+  stage = stage ? stage : "list"
+
+  if("list" == stage) {
+    # handle provision of any search term
+    if(ARGC < 2) { print "No search term provided" > "/dev/stderr"; exit 1 }
+    term = ARGV[1]
+    # pipe list of dirnames to grep stage
+    system("ls -F " dir_r " | glep -v stage=grep -v term=" term)
+    exit 0
+  }
+}
+
+# LOOPS, for grep and echo stages
+
+"grep" == stage && $0 ~ /\/$/ {
+  # pipe matches for term to echo stage
+  dir_s = dir_r $0
+  system(\
+    "cd " dir_s " && ls -a | grep -E '^.git$' > /dev/null && "\
+    "matches=$(git log --branches=* --oneline --format=\"%S | %h %s\" | grep --color=always " term ") && "\
+    "cd - > /dev/null && echo \"$matches\" | glep -v stage=echo -v dir_s=" dir_s\
+  )
+}
+
+"echo" == stage {
+  # format and output matches for term
+  print "\033[1m" dir_s "\033[0m" $0
+}

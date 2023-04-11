@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v 1.1.1
+# glep v 1.1.2
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -23,9 +23,9 @@ BEGIN { # incl. entire list stage
     # handle non-provision of search terms
     if(ARGC < 2) { print "No search term provided" > "/dev/stderr"; exit 1 }
     # comma-separate terms for use in flag
-    terms_str = ARGV[1]
+    terms_str = "\"" ARGV[1] "\""
     for(i = 2; i < length(ARGV); i++) {
-      terms_str = terms_str "," ARGV[i]
+      terms_str = terms_str ",\"" ARGV[i] "\""
     }
     # pipe list of dirnames to grep stage
     system("ls -F " dir_r " | glep -v stage=grep -v terms=" terms_str)
@@ -36,7 +36,7 @@ BEGIN { # incl. entire list stage
     # build grep string for terms passed
     split(terms, terms_arr, ",")
     for(i = 1; i <= length(terms_arr); i++) {
-      greps_str = greps_str " | grep --color=always " terms_arr[i]
+      greps_str = greps_str " | grep --color=always \"" terms_arr[i] "\""
     }
   }
 }

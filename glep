@@ -1,18 +1,18 @@
 #!/usr/bin/awk -f
 
-# glep v 1.1.0
+# glep v 1.1.1
 # ©2023 barcek
 # License: MIT
 # @ github.com
 # /barcek/glep
 
 
-# Operates via several invocations,
-# each representing a single stage,
-# each bar no. 3 invoking the next:
-# 1. 'list' (invokes no. 2)
-# 2. 'grep' (invokes no. 3)
-# 3. 'echo'
+# Run three times per initial command,
+# each run being a single named stage,
+# all but no. 3 then running the next:
+# 1. 'list' (cf. BEGIN; runs no. 2)
+# 2. 'grep' (cf. BEGIN & LOOPS; runs no. 3)
+# 3. 'echo' (cf. LOOPS)
 
 BEGIN { # incl. entire list stage
 

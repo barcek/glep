@@ -1,22 +1,22 @@
 # glep
 
-Grep across multiple git repos.
+Grep across multiple git repositories.
 
-Currently runs `git log`, using `--branches=*` and `--oneline`, for all git repos in the parent directory.
+Currently runs `git log`, using `--branches=*` and `--oneline`, for all git repositories in the parent directory.
 
-## Why..?
+## Why?
 
 For insight and consistency and relevant commit hashes.
 
-## How..?
+## How?
 
-The `glep` command takes one argument, the search term:
+The `glep` command takes one or more arguments, the search terms:
 
 ```shell
-glep <term>
+glep <term>[ ...]
 ```
 
-The default root directory is the parent - `../` - set close to the top of the source file. The term is sought in the output for each each top-level git repo in the root and the matching subset is printed.
+The default root directory is the parent - `../` - set close to the top of the source file. The terms are sought in the output for each each top-level git repo in the root and the matching subset is printed.
 
 ## Script
 

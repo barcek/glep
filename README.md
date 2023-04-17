@@ -2,11 +2,11 @@
 
 Grep across multiple git repositories.
 
-Currently runs `git log`, using `--branches=*` and `--oneline`, for all git repositories in the parent directory.
+Currently runs either `git log` using `--branches=*` and `--oneline`, or `git show`, in each case for all git repositories in the parent directory.
 
 ## Why?
 
-For insight and consistency and relevant commit hashes.
+For insight and consistency, plus the relevant commit object names and corresponding diffs, either full or filtered.
 
 ## How?
 
@@ -16,7 +16,15 @@ The `glep` command takes one or more arguments, the search terms:
 glep <term>[ ...]
 ```
 
-The default root directory is the parent - `../` - set close to the top of the source file. The terms are sought in the output for each each top-level git repo in the root and the matching subset is printed.
+The default root directory is the parent - `../` - which is set close to the top of the source file. The terms are sought in the output for each each top-level git repo in the root and the matching subset is printed.
+
+The first search term may also be a seven-character hexadecimal commit object name, preceded by the two characters '=#':
+
+```shell
+glep =#<name>[ ...]
+```
+
+If this is the sole search term provided, the entire diff for that commit is shown. With additional search terms, only the matching subset is printed.
 
 ## Script
 

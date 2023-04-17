@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v 1.1.2
+# glep v 1.2.0
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -16,27 +16,35 @@
 
 BEGIN { # incl. entire list stage
 
-  dir_r = "../"
+  dir_root = "../"
+  name_len = 2+7 # "=#[0-9a-f]{7}
+
   stage = stage ? stage : "list"
 
   if("list" == stage) {
     # handle non-provision of search terms
     if(ARGC < 2) { print "No search term provided" > "/dev/stderr"; exit 1 }
-    # comma-separate terms for use in flag
-    terms_str = "\"" ARGV[1] "\""
-    for(i = 2; i < length(ARGV); i++) {
+    # handle any commit object name passed
+    if(name_len == length(ARGV[1])) {
+      split(ARGV[1], name_arr, "=#")
+      if(name_len - 2 == length(name_arr[2])) name_str = name_arr[2]
+    }
+    # comma-separate any terms beyond name
+    terms_str = "\"" ARGV[!name_str ? 1 : 2] "\""
+    for(i = !name_str ? 2 : 3; i < length(ARGV); i++) {
       terms_str = terms_str ",\"" ARGV[i] "\""
     }
     # pipe list of dirnames to grep stage
-    system("ls -F " dir_r " | glep -v stage=grep -v terms=" terms_str)
+    system("ls -F " dir_root " | glep -v stage=grep -v name=" name_str " -v terms=" terms_str)
     exit 0
   }
 
   if("grep" == stage) {
     # build grep string for terms passed
+    cmd_grep_col = !name ? "always" : "never"
     split(terms, terms_arr, ",")
     for(i = 1; i <= length(terms_arr); i++) {
-      greps_str = greps_str " | grep --color=always \"" terms_arr[i] "\""
+      cmd_grep = cmd_grep " | grep --color=" cmd_grep_col " \"" terms_arr[i] "\""
     }
   }
 }
@@ -44,16 +52,18 @@ BEGIN { # incl. entire list stage
 # LOOPS, for grep and echo stages
 
 "grep" == stage && $0 ~ /\/$/ {
-  # pipe matches for terms to echo stage
-  dir_s = dir_r $0
-  system(\
-    "cd " dir_s " && ls -a | grep -E '^.git$' > /dev/null && "\
-    "matches=$(git log --branches=* --oneline --format=\"%S | %h %s\"" greps_str ") && "\
-    "cd - > /dev/null && echo \"$matches\" | glep -v stage=echo -v dir_s=" dir_s\
-  )
+  dir_next = dir_root $0
+  # set command to find git repositories
+  cmd_find = "cd " dir_next " && ls -a | grep -E '^.git$' > /dev/null"
+  # set command to pass matches to echo stage
+  cmd_pass = "cd - > /dev/null && echo \"$matches\" | glep -v stage=echo -v dir_next=" dir_next
+  # set command for full pipeline per commit object name
+  cmd_full = !name ? cmd_find "&& matches=$(git log --branches=* --oneline --format=\"%S | %h %s\"" cmd_grep ") && " cmd_pass\
+                   : cmd_find "&& git show --color=always " name " 2> /dev/null " cmd_grep
+  system(cmd_full)
 }
 
 "echo" == stage {
   # format and output matches for terms
-  print "\033[1m" dir_s "\033[0m" $0
+  print "\033[1m" dir_next "\033[0m" $0
 }

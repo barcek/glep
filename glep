@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v 1.2.0
+# glep v 1.2.1
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -10,14 +10,20 @@
 # Run three times per initial command,
 # each run being a single named stage,
 # all but no. 3 then running the next:
-# 1. 'list' (cf. BEGIN; runs no. 2)
-# 2. 'grep' (cf. BEGIN & LOOPS; runs no. 3)
-# 3. 'echo' (cf. LOOPS)
+# 1. 'list' (BEGIN; runs no. 2)
+# 2. 'grep' (BEGIN & LOOPS; runs no. 3)
+# 3. 'echo' (LOOPS)
+#
+# Arguments to no. 1 are search terms,
+# used by default to filter 'git log';
+# the first may instead be a prefixed
+# commit object name for use in 'show'
 
 BEGIN { # incl. entire list stage
 
+  # set default values
   dir_root = "../"
-  name_len = 2+7 # "=#[0-9a-f]{7}
+  name_len = 2+7 # prefix (=#) + commit object name ([0-9a-f]{7})
 
   stage = stage ? stage : "list"
 

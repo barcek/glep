@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v 1.2.1
+# glep v 1.3.0
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -16,7 +16,7 @@
 #
 # Arguments to no. 1 are search terms,
 # used by default to filter 'git log';
-# the first may instead be a prefixed
+# one argument may also be a prefixed
 # commit object name for use in 'show'
 
 BEGIN { # incl. entire list stage
@@ -30,15 +30,18 @@ BEGIN { # incl. entire list stage
   if("list" == stage) {
     # handle non-provision of search terms
     if(ARGC < 2) { print "No search term provided" > "/dev/stderr"; exit 1 }
-    # handle any commit object name passed
-    if(name_len == length(ARGV[1])) {
-      split(ARGV[1], name_arr, "=#")
-      if(name_len - 2 == length(name_arr[2])) name_str = name_arr[2]
+    # extract any commit object name found,
+    # consolidating remaining search terms
+    for(i = 1; i < length(ARGV); i++) {
+      if(name_len     != length(ARGV[i])    ) { terms_arr[j++] = ARGV[i]; continue }
+      split(ARGV[i], name_arr, "=#")
+      if(name_len - 2 != length(name_arr[2])) { terms_arr[j++] = ARGV[i]; continue }
+      name_str = name_arr[2]
     }
     # comma-separate any terms beyond name
-    terms_str = "\"" ARGV[!name_str ? 1 : 2] "\""
-    for(i = !name_str ? 2 : 3; i < length(ARGV); i++) {
-      terms_str = terms_str ",\"" ARGV[i] "\""
+    terms_str = "\"" terms_arr[0] "\""
+    for(i = 1; i < length(terms_arr); i++) {
+      terms_str = terms_str ",\"" terms_arr[i] "\""
     }
     # pipe list of dirnames to grep stage
     system("ls -F " dir_root " | glep -v stage=grep -v name=" name_str " -v terms=" terms_str)

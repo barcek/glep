@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v 1.3.1
+# glep v 1.4.0
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -68,7 +68,7 @@ BEGIN { # incl. entire list stage
   # set command to pass matches to echo stage
   cmd_pass = "cd - > /dev/null && echo \"$matches\" | glep -v stage=echo -v dir_next=" dir_next
   # set command for full pipeline per commit object name
-  cmd_full = !name ? cmd_find "&& matches=$(git log --branches=* --oneline --format=\"%S | %h %s\"" cmd_grep ") && " cmd_pass\
+  cmd_full = !name ? cmd_find "&& matches=$(git log --branches=* --oneline --format=\"%S | %as %an | %h %s\"" cmd_grep ") && " cmd_pass\
                    : cmd_find "&& git show --color=always " name " 2> /dev/null " cmd_grep
   system(cmd_full)
 }

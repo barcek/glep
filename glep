@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v 1.3.0
+# glep v 1.3.1
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -23,7 +23,8 @@ BEGIN { # incl. entire list stage
 
   # set default values
   dir_root = "../"
-  name_len = 2+7 # prefix (=#) + commit object name ([0-9a-f]{7})
+  arg_name_pre = "=#"
+  arg_name_len = 2+7 # arg_name_pre + commit object name ([0-9a-f]{7})
 
   stage = stage ? stage : "list"
 
@@ -33,9 +34,9 @@ BEGIN { # incl. entire list stage
     # extract any commit object name found,
     # consolidating remaining search terms
     for(i = 1; i < length(ARGV); i++) {
-      if(name_len     != length(ARGV[i])    ) { terms_arr[j++] = ARGV[i]; continue }
-      split(ARGV[i], name_arr, "=#")
-      if(name_len - 2 != length(name_arr[2])) { terms_arr[j++] = ARGV[i]; continue }
+      if(arg_name_len     != length(ARGV[i])    ) { terms_arr[j++] = ARGV[i]; continue }
+      split(ARGV[i], name_arr, arg_name_pre)
+      if(arg_name_len - 2 != length(name_arr[2])) { terms_arr[j++] = ARGV[i]; continue }
       name_str = name_arr[2]
     }
     # comma-separate any terms beyond name

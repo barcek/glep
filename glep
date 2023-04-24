@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v 1.4.0
+# glep v 1.5.0
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -16,28 +16,43 @@
 #
 # Arguments to no. 1 are search terms,
 # used by default to filter 'git log';
-# one argument may also be a prefixed
+# any may also be a prefixed author or
 # commit object name for use in 'show'
 
 BEGIN { # incl. entire list stage
 
   # set default values
   dir_root = "../"
-  arg_name_pre = "=#"
-  arg_name_len = 2+7 # arg_name_pre + commit object name ([0-9a-f]{7})
+  # - specific arg formats
+  arg_pre_base     = "="
+  arg_pre_base_len = length(arg_pre_base)
+  #   - commit object name
+  arg_name_pre     = arg_pre_base "#"
+  arg_name_pre_len = length(arg_name_pre)
+  arg_name_len     = arg_name_pre_len + 7 # commit object name ([0-9a-f]{7})
+  #   - author
+  arg_auth_pre     = arg_pre_base "@"
+  arg_auth_pre_len = length(arg_auth_pre)
 
   stage = stage ? stage : "list"
 
   if("list" == stage) {
     # handle non-provision of search terms
     if(ARGC < 2) { print "No search term provided" > "/dev/stderr"; exit 1 }
-    # extract any commit object name found,
+    # extract specifically formatted args,
     # consolidating remaining search terms
     for(i = 1; i < length(ARGV); i++) {
-      if(arg_name_len     != length(ARGV[i])    ) { terms_arr[j++] = ARGV[i]; continue }
-      split(ARGV[i], name_arr, arg_name_pre)
-      if(arg_name_len - 2 != length(name_arr[2])) { terms_arr[j++] = ARGV[i]; continue }
-      name_str = name_arr[2]
+      split(ARGV[i], base_arr, arg_pre_base)
+      if(length(base_arr[2]) != length(ARGV[i]) - arg_pre_base_len) { terms_arr[j++] = ARGV[i]; continue }
+      # - commit object name
+      if(arg_name_len == length(ARGV[i])) {
+        split(ARGV[i], name_arr, arg_name_pre)
+        if(length(name_arr[2]) == arg_name_len  - arg_name_pre_len) { name_str = name_arr[2];   continue }
+      }
+      # - author
+      split(ARGV[i], auth_arr, arg_auth_pre)
+      if(length(auth_arr[2]) == length(ARGV[i]) - arg_auth_pre_len) { auth_str = auth_arr[2];   continue }
+      terms_arr[j++] = ARGV[i]
     }
     # comma-separate any terms beyond name
     terms_str = "\"" terms_arr[0] "\""
@@ -45,11 +60,13 @@ BEGIN { # incl. entire list stage
       terms_str = terms_str ",\"" terms_arr[i] "\""
     }
     # pipe list of dirnames to grep stage
-    system("ls -F " dir_root " | glep -v stage=grep -v name=" name_str " -v terms=" terms_str)
+    system("ls -F " dir_root " | glep -v stage=grep -v auth=" auth_str " -v name=" name_str " -v terms=" terms_str)
     exit 0
   }
 
   if("grep" == stage) {
+    # build author arg for author passed
+    arg_auth = "--author=" auth
     # build grep string for terms passed
     cmd_grep_col = !name ? "always" : "never"
     split(terms, terms_arr, ",")
@@ -68,7 +85,7 @@ BEGIN { # incl. entire list stage
   # set command to pass matches to echo stage
   cmd_pass = "cd - > /dev/null && echo \"$matches\" | glep -v stage=echo -v dir_next=" dir_next
   # set command for full pipeline per commit object name
-  cmd_full = !name ? cmd_find "&& matches=$(git log --branches=* --oneline --format=\"%S | %as %an | %h %s\"" cmd_grep ") && " cmd_pass\
+  cmd_full = !name ? cmd_find "&& matches=$(git log " arg_auth " --branches=* --oneline --format=\"%S | %as %an | %h %s\"" cmd_grep ") && " cmd_pass\
                    : cmd_find "&& git show --color=always " name " 2> /dev/null " cmd_grep
   system(cmd_full)
 }

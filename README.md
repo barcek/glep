@@ -18,10 +18,22 @@ glep <term>[ ...]
 
 The default root directory is the parent - `../` - which is set close to the top of the source file. The terms are sought for each top-level git repo in the root, by default in the output of `git log` using `--branches=*` and `--oneline`, with the matching log entries printed.
 
-One term may also be a seven-character hexadecimal commit object name, preceded by the two characters '=#':
+### Filtering by author
+
+One term may also be all or part of the commit author name, preceded by the two characters '=@':
 
 ```shell
-glep =#<name>[ ...]
+glep =@<author_name>[ ...]
+```
+
+This will be passed to `git log` with the `--author` flag to filter the results.
+
+### Displaying a diff
+
+One term may instead be a seven-character hexadecimal commit object name, preceded by the two characters '=#':
+
+```shell
+glep =#<object_name>[ ...]
 ```
 
 If this is the sole search term provided, the entire diff for that commit is shown, per `git show`. With additional search terms, only the matching lines of the diff are printed.

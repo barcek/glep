@@ -1,11 +1,10 @@
 #!/usr/bin/awk -f
 
-# glep v 1.5.0
+# glep v 1.5.1
 # ©2023 barcek
 # License: MIT
 # @ github.com
 # /barcek/glep
-
 
 # Run three times per initial command,
 # each run being a single named stage,
@@ -37,21 +36,34 @@ BEGIN { # incl. entire list stage
   stage = stage ? stage : "list"
 
   if("list" == stage) {
+
     # handle non-provision of search terms
     if(ARGC < 2) { print "No search term provided" > "/dev/stderr"; exit 1 }
+
     # extract specifically formatted args,
     # consolidating remaining search terms
     for(i = 1; i < length(ARGV); i++) {
+      # consolidate if not specially formatted
       split(ARGV[i], base_arr, arg_pre_base)
-      if(length(base_arr[2]) != length(ARGV[i]) - arg_pre_base_len) { terms_arr[j++] = ARGV[i]; continue }
-      # - commit object name
+      if(length(base_arr[2]) != length(ARGV[i]) - arg_pre_base_len) {
+        terms_arr[j++] = ARGV[i]
+        continue
+      }
+      # extract if commit object name
       if(arg_name_len == length(ARGV[i])) {
         split(ARGV[i], name_arr, arg_name_pre)
-        if(length(name_arr[2]) == arg_name_len  - arg_name_pre_len) { name_str = name_arr[2];   continue }
+        if(length(name_arr[2]) == arg_name_len - arg_name_pre_len) {
+          name_str = name_arr[2]
+          continue
+        }
       }
-      # - author
+      # extract if author
       split(ARGV[i], auth_arr, arg_auth_pre)
-      if(length(auth_arr[2]) == length(ARGV[i]) - arg_auth_pre_len) { auth_str = auth_arr[2];   continue }
+      if(length(auth_arr[2]) == length(ARGV[i]) - arg_auth_pre_len) {
+        auth_str = auth_arr[2]
+        continue
+      }
+      # else consolidate
       terms_arr[j++] = ARGV[i]
     }
     # comma-separate any terms beyond name
@@ -60,13 +72,16 @@ BEGIN { # incl. entire list stage
       terms_str = terms_str ",\"" terms_arr[i] "\""
     }
     # pipe list of dirnames to grep stage
-    system("ls -F " dir_root " | glep -v stage=grep -v auth=" auth_str " -v name=" name_str " -v terms=" terms_str)
+    system(\
+      "ls -F " dir_root " | glep -v stage=grep"\
+                               " -v terms=" terms_str\
+                               " -v  name="  name_str\
+                               " -v  auth="  auth_str\
+    )
     exit 0
   }
 
   if("grep" == stage) {
-    # build author arg for author passed
-    arg_auth = "--author=" auth
     # build grep string for terms passed
     cmd_grep_col = !name ? "always" : "never"
     split(terms, terms_arr, ",")
@@ -79,18 +94,26 @@ BEGIN { # incl. entire list stage
 # LOOPS, for grep and echo stages
 
 "grep" == stage && $0 ~ /\/$/ {
+
   dir_next = dir_root $0
+
   # set command to find git repositories
   cmd_find = "cd " dir_next " && ls -a | grep -E '^.git$' > /dev/null"
-  # set command to pass matches to echo stage
-  cmd_pass = "cd - > /dev/null && echo \"$matches\" | glep -v stage=echo -v dir_next=" dir_next
   # set command for full pipeline per commit object name
-  cmd_full = !name ? cmd_find "&& matches=$(git log " arg_auth " --branches=* --oneline --format=\"%S | %as %an | %h %s\"" cmd_grep ") && " cmd_pass\
+  cmd_full = !name ? cmd_find "&& matches=$("\
+                                            "git log --branches=*"\
+                                                   " --author=" auth\
+                                                   " --oneline"\
+                                                   " --format=\"%S | %as %an | %h %s\"" cmd_grep\
+                                          ") "\
+                              "&& cd - > /dev/null "\
+                              "&& echo \"$matches\" | glep -v stage=echo"\
+                                                         " -v path=" dir_next\
                    : cmd_find "&& git show --color=always " name " 2> /dev/null " cmd_grep
   system(cmd_full)
 }
 
 "echo" == stage {
   # format and output matches for terms
-  print "\033[1m" dir_next "\033[0m" $0
+  print "\033[1m" path "\033[0m" $0
 }

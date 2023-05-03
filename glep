@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v 1.5.1
+# glep v 1.6.0
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -88,17 +88,29 @@ BEGIN { # incl. entire list stage
     for(i = 1; i <= length(terms_arr); i++) {
       cmd_grep = cmd_grep " | grep --color=" cmd_grep_col " \"" terms_arr[i] "\""
     }
+    # run commands for root directory
+    grep_perform(dir_root)
   }
 }
 
 # LOOPS, for grep and echo stages
 
 "grep" == stage && $0 ~ /\/$/ {
-
+  # run commands for next subdirectory
   dir_next = dir_root $0
+  grep_perform(dir_next)
+}
 
-  # set command to find git repositories
-  cmd_find = "cd " dir_next " && ls -a | grep -E '^.git$' > /dev/null"
+"echo" == stage {
+  # format and output matches for terms
+  print "\033[1m" path "\033[0m" $0
+}
+
+# UTILS
+
+function grep_perform(dir_dest) {
+  # set command to find git directory
+  cmd_find = "cd " dir_dest " && ls -a | grep -E '^.git$' > /dev/null"
   # set command for full pipeline per commit object name
   cmd_full = !name ? cmd_find "&& matches=$("\
                                             "git log --branches=*"\
@@ -108,12 +120,7 @@ BEGIN { # incl. entire list stage
                                           ") "\
                               "&& cd - > /dev/null "\
                               "&& echo \"$matches\" | glep -v stage=echo"\
-                                                         " -v path=" dir_next\
+                                                         " -v path=" dir_dest\
                    : cmd_find "&& git show --color=always " name " 2> /dev/null " cmd_grep
   system(cmd_full)
-}
-
-"echo" == stage {
-  # format and output matches for terms
-  print "\033[1m" path "\033[0m" $0
 }

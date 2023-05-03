@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v 1.6.0
+# glep v 1.7.1
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -15,26 +15,23 @@
 #
 # Arguments to no. 1 are search terms,
 # used by default to filter 'git log';
-# any may also be a prefixed author or
-# commit object name for use in 'show'
+# any may be a prefixed root, author
+# or commit object name for 'git show'
 
 BEGIN { # incl. entire list stage
 
   # set default values
+  # - general
   dir_root = root ? root : "../"
-  # - specific arg formats
-  arg_pre_base     = "="
-  arg_pre_base_len = length(arg_pre_base)
+  # - special term formats
+  arg_pre_base = "="
   #   - root directory
-  arg_root_pre     = arg_pre_base ">"
-  arg_root_pre_len = length(arg_root_pre)
+  arg_root_pre = arg_pre_base ">"
   #   - commit object name
-  arg_name_pre     = arg_pre_base "#"
-  arg_name_pre_len = length(arg_name_pre)
-  arg_name_len     = arg_name_pre_len + 7 # commit object name ([0-9a-f]{7})
+  arg_name_pre = arg_pre_base "#"
+  arg_name_len = length(arg_name_pre) + 7 # commit object name ([0-9a-f]{7})
   #   - author
-  arg_auth_pre     = arg_pre_base "@"
-  arg_auth_pre_len = length(arg_auth_pre)
+  arg_auth_pre = arg_pre_base "@"
 
   stage = stage ? stage : "list"
 
@@ -43,34 +40,33 @@ BEGIN { # incl. entire list stage
     # handle non-provision of search terms
     if(ARGC < 2) { print "No search term provided" > "/dev/stderr"; exit 1 }
 
-    # extract specifically formatted args,
-    # consolidating remaining search terms
+    # extract specially formatted search terms, consolidating remaining
     for(i = 1; i < length(ARGV); i++) {
       # consolidate if not specially formatted
       split(ARGV[i], base_arr, arg_pre_base)
-      if(length(base_arr[2]) != length(ARGV[i]) - arg_pre_base_len) {
+      if(length(base_arr[2]) != length(ARGV[i]) - length(arg_pre_base)) {
         terms_arr[j++] = ARGV[i]
         continue
       }
       # extract if root directory
-      split(ARGV[i], root_arr, arg_root_pre)
-      if(length(root_arr[2]) == length(ARGV[i]) - arg_root_pre_len) {
-        split(root_arr[2], path_arr, "/")
-        dir_root = !length(path_arr[length(path_arr)]) ? root_arr[2] : root_arr[2] "/"
+      term_root = term_extract(ARGV[i], arg_root_pre)
+      if(term_root) {
+        split(term_root, path_arr, "/")
+        dir_root = !length(path_arr[length(path_arr)]) ? term_root : term_root "/"
         continue
       }
       # extract if commit object name
       if(arg_name_len == length(ARGV[i])) {
-        split(ARGV[i], name_arr, arg_name_pre)
-        if(length(name_arr[2]) == arg_name_len - arg_name_pre_len) {
-          name_str = name_arr[2]
+        term_name = term_extract(ARGV[i], arg_name_pre)
+        if(term_name) {
+          name_str = term_name
           continue
         }
       }
       # extract if author
-      split(ARGV[i], auth_arr, arg_auth_pre)
-      if(length(auth_arr[2]) == length(ARGV[i]) - arg_auth_pre_len) {
-        auth_str = auth_arr[2]
+      term_auth = term_extract(ARGV[i], arg_auth_pre)
+      if(term_auth) {
+        auth_str = term_auth
         continue
       }
       # else consolidate
@@ -119,6 +115,13 @@ BEGIN { # incl. entire list stage
 
 # UTILS
 
+# return term unprefixed if special else empty string
+function term_extract(arg, pre) {
+  split(arg, arr, pre)
+  return length(arr[2]) == length(arg) - length(pre) ? arr[2] : ""
+}
+
+# build and run pipeline performing grep stage tasks
 function grep_perform(dir_dest) {
   # set command to find git directory
   cmd_find = "cd " dir_dest " && ls -a | grep -E '^.git$' > /dev/null"

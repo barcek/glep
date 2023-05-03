@@ -21,10 +21,13 @@
 BEGIN { # incl. entire list stage
 
   # set default values
-  dir_root = "../"
+  dir_root = root ? root : "../"
   # - specific arg formats
   arg_pre_base     = "="
   arg_pre_base_len = length(arg_pre_base)
+  #   - root directory
+  arg_root_pre     = arg_pre_base ">"
+  arg_root_pre_len = length(arg_root_pre)
   #   - commit object name
   arg_name_pre     = arg_pre_base "#"
   arg_name_pre_len = length(arg_name_pre)
@@ -47,6 +50,13 @@ BEGIN { # incl. entire list stage
       split(ARGV[i], base_arr, arg_pre_base)
       if(length(base_arr[2]) != length(ARGV[i]) - arg_pre_base_len) {
         terms_arr[j++] = ARGV[i]
+        continue
+      }
+      # extract if root directory
+      split(ARGV[i], root_arr, arg_root_pre)
+      if(length(root_arr[2]) == length(ARGV[i]) - arg_root_pre_len) {
+        split(root_arr[2], path_arr, "/")
+        dir_root = !length(path_arr[length(path_arr)]) ? root_arr[2] : root_arr[2] "/"
         continue
       }
       # extract if commit object name
@@ -75,6 +85,7 @@ BEGIN { # incl. entire list stage
     system(\
       "ls -F " dir_root " | glep -v stage=grep"\
                                " -v terms=" terms_str\
+                               " -v  root="  dir_root\
                                " -v  name="  name_str\
                                " -v  auth="  auth_str\
     )

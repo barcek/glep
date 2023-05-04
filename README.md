@@ -16,13 +16,21 @@ The `glep` command takes one or more arguments, the search terms:
 glep <term>[ ...]
 ```
 
-The default root directory is the parent - `../` - which is set close to the top of the source file. The terms are sought for each top-level git repo in the root, by default in the output of `git log` using `--branches=*` and `--oneline`, with the matching log entries printed.
+The default root directory is the parent - `../` - which is set close to the top of the source file. The terms are sought for the root directory, if a git repo, and for each top-level git repo in the root. The search is performed by default in the output of `git log` using `--branches=*` and `--oneline`, with the matching log entries printed.
+
+### Overriding the root
+
+One term may be an alternative root directory, preceded by the two characters '=>':
+
+```
+glep =><path_to_root>[ ...]
+```
 
 ### Filtering by author
 
 One term may also be all or part of the commit author name, preceded by the two characters '=@':
 
-```shell
+```
 glep =@<author_name>[ ...]
 ```
 
@@ -32,7 +40,7 @@ This will be passed to `git log` with the `--author` flag to filter the results.
 
 One term may instead be a seven-character hexadecimal commit object name, preceded by the two characters '=#':
 
-```shell
+```
 glep =#<object_name>[ ...]
 ```
 

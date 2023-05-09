@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v 1.7.2
+# glep v 1.8.0
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -22,13 +22,14 @@ BEGIN { # incl. entire list stage
 
   defaults_set() # dir_root - root directory
                  # specials - specially formatted search terms
+                 # txt_help - help text
 
   stage = stage ? stage : "list"
 
   if("list" == stage) {
 
     # handle non-provision of search terms
-    if(ARGC < 2) { print "No search term provided" > "/dev/stderr"; exit 1 }
+    if(ARGC < 2) { print txt_help > "/dev/stderr"; exit 1 }
 
     # extract specially formatted search terms, consolidating remaining
     for(i = 1; i < length(ARGV); i++) {
@@ -113,12 +114,27 @@ function defaults_set() {
   specials["pre"] = "="
   # - root directory
   specials["root"]["pre"] = specials["pre"] ">"
+  specials["root"]["var"] = "path_to_root"
+  specials["root"]["exp"] = "an alternative root directory (currently '" dir_root "')"
   # - commit object name
   specials["name"]["pre"] = specials["pre"] "#"
   specials["name"]["stem_len"] = 7 # commit object name ([0-9a-f]{7})
   specials["name"]["len"] = length(specials["name"]["pre"]) + specials["name"]["stem_len"]
+  specials["name"]["var"] = "commit_object_name"
+  specials["name"]["exp"] = "a " specials["name"]["stem_len"] "-character hexadecimal commit object name"
   # - author
   specials["auth"]["pre"] = specials["pre"] "@"
+  specials["auth"]["var"] = "author"
+  specials["auth"]["exp"] = "the commit author"
+  # help text
+  txt_help = "Usage: glep <search_term>[ ...]\nAny search term may be one of the following prefixed instances:\n"
+  specials_c = length(specials) - 1
+  for(item in specials) {
+    if(item == "pre") continue
+    specials_c--
+    line_end = 0 != specials_c ? "\n" : ""
+    txt_help = txt_help " " specials[item]["pre"] "<" specials[item]["var"] "> - " specials[item]["exp"] line_end
+  }
 }
 
 # return term unprefixed if special else empty string

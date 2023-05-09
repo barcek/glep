@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v 1.7.1
+# glep v 1.7.2
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -20,18 +20,8 @@
 
 BEGIN { # incl. entire list stage
 
-  # set default values
-  # - general
-  dir_root = root ? root : "../"
-  # - special term formats
-  arg_pre_base = "="
-  #   - root directory
-  arg_root_pre = arg_pre_base ">"
-  #   - commit object name
-  arg_name_pre = arg_pre_base "#"
-  arg_name_len = length(arg_name_pre) + 7 # commit object name ([0-9a-f]{7})
-  #   - author
-  arg_auth_pre = arg_pre_base "@"
+  defaults_set() # dir_root - root directory
+                 # specials - specially formatted search terms
 
   stage = stage ? stage : "list"
 
@@ -43,28 +33,28 @@ BEGIN { # incl. entire list stage
     # extract specially formatted search terms, consolidating remaining
     for(i = 1; i < length(ARGV); i++) {
       # consolidate if not specially formatted
-      split(ARGV[i], base_arr, arg_pre_base)
-      if(length(base_arr[2]) != length(ARGV[i]) - length(arg_pre_base)) {
+      split(ARGV[i], base_arr, specials["pre"])
+      if(length(base_arr[2]) != length(ARGV[i]) - length(specials["pre"])) {
         terms_arr[j++] = ARGV[i]
         continue
       }
       # extract if root directory
-      term_root = term_extract(ARGV[i], arg_root_pre)
+      term_root = term_extract(ARGV[i], specials["root"]["pre"])
       if(term_root) {
         split(term_root, path_arr, "/")
         dir_root = !length(path_arr[length(path_arr)]) ? term_root : term_root "/"
         continue
       }
       # extract if commit object name
-      if(arg_name_len == length(ARGV[i])) {
-        term_name = term_extract(ARGV[i], arg_name_pre)
+      if(specials["name"]["len"] == length(ARGV[i])) {
+        term_name = term_extract(ARGV[i], specials["name"]["pre"])
         if(term_name) {
           name_str = term_name
           continue
         }
       }
       # extract if author
-      term_auth = term_extract(ARGV[i], arg_auth_pre)
+      term_auth = term_extract(ARGV[i], specials["auth"]["pre"])
       if(term_auth) {
         auth_str = term_auth
         continue
@@ -114,6 +104,22 @@ BEGIN { # incl. entire list stage
 }
 
 # UTILS
+
+# initialize default values
+function defaults_set() {
+  # general
+  dir_root = root ? root : "../"
+  # special term formats
+  specials["pre"] = "="
+  # - root directory
+  specials["root"]["pre"] = specials["pre"] ">"
+  # - commit object name
+  specials["name"]["pre"] = specials["pre"] "#"
+  specials["name"]["stem_len"] = 7 # commit object name ([0-9a-f]{7})
+  specials["name"]["len"] = length(specials["name"]["pre"]) + specials["name"]["stem_len"]
+  # - author
+  specials["auth"]["pre"] = specials["pre"] "@"
+}
 
 # return term unprefixed if special else empty string
 function term_extract(arg, pre) {

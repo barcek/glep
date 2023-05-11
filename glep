@@ -1,10 +1,14 @@
 #!/usr/bin/awk -f
 
-# glep v 1.9.0
+# glep v 1.9.1
 # ©2023 barcek
 # License: MIT
 # @ github.com
 # /barcek/glep
+
+# Assumes the use of a POSIX shell and
+# the presence of AWK (Gawk),
+# plus Git, grep and ls
 
 # Run three times per initial command,
 # each run being a single named stage,

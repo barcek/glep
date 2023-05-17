@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v 1.9.1
+# glep v 1.9.2
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -135,9 +135,18 @@ function defaults_set() {
   # help text
   txt_usage = "Usage: glep <search_term>[ ...] / " specials["pre"] "help/" specials["pre"] "h\n"
   txt_terms = "Terms:\n Any search term may be one of the following prefixed instances:\n"
+  # - get max term parts length for term line spacing
   for(item in specials) {
     if(item == "pre") continue
-    txt_terms = txt_terms "  " specials[item]["pre"] "<" specials[item]["var"] "> - " specials[item]["exp"] "\n"
+    parts_l = length(specials[item]["pre"]) + length(specials[item]["var"])
+    space_c = parts_l > space_c ? parts_l : space_c
+  }
+  # - add term lines
+  for(item in specials) {
+    if(item == "pre") continue
+    parts_l = length(specials[item]["pre"]) + length(specials[item]["var"])
+    spacing = sprintf("%" space_c - parts_l + 2 "s", "")
+    txt_terms = txt_terms "  " specials[item]["pre"] "<" specials[item]["var"] ">" spacing specials[item]["exp"] "\n"
   }
   txt_flags = "Flags:\n  " specials["pre"] "h, " specials["pre"] "help   show usage, terms and flags then exit"
   txt_help  = txt_usage txt_terms txt_flags

@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v 1.9.2
+# glep v 1.9.3
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -165,18 +165,25 @@ function term_extract(arg, pre) {
 
 # build and run pipeline performing grep stage tasks
 function grep_perform(dir_dest) {
-  # set command to find git directory
+  # set base command to find git directory
   cmd_find = "cd " dir_dest " && ls -a | grep -E '^.git$' > /dev/null"
-  # set command for full pipeline per commit object name
-  cmd_full = !name ? cmd_find "&& matches=$("\
-                                            "git log --branches=*"\
-                                                   " --author=" auth\
-                                                   " --oneline"\
-                                                   " --format=\"%S | %as %an | %h %s\"" cmd_grep\
-                                          ") "\
-                              "&& cd - > /dev/null "\
-                              "&& echo \"$matches\" | glep -v stage=echo"\
-                                                         " -v path=" dir_dest\
-                   : cmd_find "&& git show --color=always " name " 2> /dev/null " cmd_grep
-  system(cmd_full)
+  # set full command then run:
+  # - for 'git log' if no commit object name
+  if(!name) {
+    cmd_full = cmd_find "&& matches=$("\
+                                      "git log --branches=*"\
+                                             " --author=" auth\
+                                             " --oneline"\
+                                             " --format=\"%S | %as %an | %h %s\"" cmd_grep\
+                                    ") "\
+                        "&& cd - > /dev/null "\
+                        "&& echo \"$matches\" | glep -v stage=echo"\
+                                                   " -v path=" dir_dest
+    while((cmd_full) | getline line) print line
+  }
+  # - for 'git show' otherwise, allowing for use of SIGINT
+  else {
+    cmd_full = cmd_find "&& git show --color=always " name " 2> /dev/null " cmd_grep
+    system(cmd_full)
+  }
 }

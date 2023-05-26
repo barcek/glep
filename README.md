@@ -46,14 +46,15 @@ glep =#<object_name>[ ...]
 
 If this is the sole search term provided, the entire diff for that commit is shown, per `git show`. With additional search terms, only the matching lines of the diff are printed.
 
-## Script
+## Source
 
 The script invokes itself and is assumed in doing so to have been made both executable, via a command like `chmod +x glep`, and available from any directory, e.g. by placing it in the '/bin' or '/usr/bin' directory.
 
-The hashbang at the top of the file assumes the presence of AWK, the source code that this is in fact Gawk, and the `git` command that Git itself is installed.
+The hashbang at the top of the file assumes the presence of AWK in '/usr/bin', the source code that this is in fact Gawk and that several other utils and Git itself are installed. A list can be found close to the top of the file.
 
 ## Options
 
-The following can be passed to `glep` in place of any search terms:
+The following can be passed to `glep` as if a search term:
 
+- `=regexp-extended` / `=e`, to use extended regular expressions in search terms
 - `=help` / `=h`, to show usage, terms and flags then exit

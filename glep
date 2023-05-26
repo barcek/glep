@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v1.10.0
+# glep v1.10.1
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -35,7 +35,8 @@ BEGIN { # incl. entire list stage
     # handle non-provision of search terms
     if(ARGC < 2) help_display()
 
-    # extract specially formatted search terms, consolidating remaining
+    # extract any specially formatted search terms, consolidating remaining, and
+    # handle any options
     for(i = 1; i < length(ARGV); i++) {
       # consolidate if not specially formatted
       split(ARGV[i], base_arr, specials["pre"])
@@ -64,13 +65,13 @@ BEGIN { # incl. entire list stage
         auth_str = term_auth
         continue
       }
-      # handle regexp extended option
-      if(specials["pre"] "regexp-extended" == ARGV[i] || specials["pre"] "e" == ARGV[i]) {
-        rgx_e_str = "true"
+      # handle if regexp extended flag
+      if(options["rgxe"]["word"] == ARGV[i] || options["rgxe"]["char"] == ARGV[i]) {
+        rgxe_str = "true"
         continue
       }
-      # handle help option
-      if(specials["pre"] "help" == ARGV[i] || specials["pre"] "h" == ARGV[i]) help_display()
+      # handle if help flag
+      if(options["help"]["word"] == ARGV[i] || options["help"]["char"] == ARGV[i]) help_display()
       # else consolidate
       terms_arr[j++] = ARGV[i]
     }
@@ -83,7 +84,7 @@ BEGIN { # incl. entire list stage
     system(\
       "ls -F " dir_root " | glep -v stage=grep"\
                                " -v terms=" terms_str\
-                               " -v rgx_e=" rgx_e_str\
+                               " -v  rgxe="  rgxe_str\
                                " -v  root="  dir_root\
                                " -v  name="  name_str\
                                " -v  auth="  auth_str\
@@ -93,8 +94,8 @@ BEGIN { # incl. entire list stage
 
   if("grep" == stage) {
     # build grep string for terms passed
-    cmd_grep_col = !name  ? "always" : "never"
-    cmd_grep_ext = !rgx_e ? ""       : "-E"
+    cmd_grep_col = !name ? "always" : "never"
+    cmd_grep_ext = !rgxe ? ""       : "-E"
     split(terms, terms_arr, ",")
     for(i = 1; i <= length(terms_arr); i++) {
       cmd_grep = cmd_grep " | grep --color=" cmd_grep_col " " cmd_grep_ext " \"" terms_arr[i] "\""
@@ -123,7 +124,7 @@ BEGIN { # incl. entire list stage
 function defaults_set() {
   # general
   dir_root = root ? root : "../"
-  # special term formats
+  # special term formats and options
   specials["pre"] = "="
   # - root directory
   specials["root"]["pre"] = specials["pre"] ">"
@@ -139,8 +140,16 @@ function defaults_set() {
   specials["auth"]["pre"] = specials["pre"] "@"
   specials["auth"]["var"] = "author"
   specials["auth"]["exp"] = "the commit author"
+  # - regexp extended
+  options["rgxe"]["char"] = specials["pre"] "e"
+  options["rgxe"]["word"] = specials["pre"] "regexp-extended"
+  options["rgxe"]["desc"] = "use extended regular expressions in search terms"
+  # - help
+  options["help"]["char"] = specials["pre"] "h"
+  options["help"]["word"] = specials["pre"] "help"
+  options["help"]["desc"] = "show usage, terms and flags then exit"
   # help text
-  txt_usage = "Usage: glep <search_term>[ ...] [" specials["pre"] "regexp-extended/" specials["pre"] "e] / " specials["pre"] "help/" specials["pre"] "h\n"
+  txt_usage = "Usage: glep <search_term>[ ...] [" options["rgxe"]["word"] "/" options["rgxe"]["char"] "] / " options["help"]["word"] "/" options["help"]["char"] "\n"
   txt_terms = "Terms:\n Any search term may be one of the following prefixed instances:\n"
   # - get max term parts length for term line spacing
   for(item in specials) {
@@ -155,9 +164,19 @@ function defaults_set() {
     spacing = sprintf("%" space_c - parts_l + 2 "s", "")
     txt_terms = txt_terms "  " specials[item]["pre"] "<" specials[item]["var"] ">" spacing specials[item]["exp"] "\n"
   }
-  txt_flags = "Flags:\n"\
-              "  " specials["pre"] "e, " specials["pre"] "regexp-extended    use extended regular expressions in search terms\n"\
-              "  " specials["pre"] "h, " specials["pre"] "help               show usage, terms and flags then exit"
+  txt_flags = "Flags:\n"
+  # - get max flag pair length for flag line spacing
+  for(item in options) {
+    pairs_l = length(options[item]["char"]) + 2 + length(options[item]["word"])
+    space_c = pairs_l > space_c ? pairs_l : space_c
+  }
+  # - add flag lines
+  for(item in options) {
+    pairs_l = length(options[item]["char"]) + 2 + length(options[item]["word"])
+    spacing = sprintf("%" space_c - pairs_l + 2 "s", "")
+    txt_flags = txt_flags "  " options[item]["char"] ", " options[item]["word"] spacing options[item]["desc"]
+    item_c++; if(item_c != length(options)) txt_flags = txt_flags "\n"
+  }
   txt_help  = txt_usage txt_terms txt_flags
 }
 

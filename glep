@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v1.10.2
+# glep v1.10.3
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -18,8 +18,9 @@
 # 3. 'echo' (LOOPS)
 #
 # Arguments to no. 1 are search terms,
-# used by default to filter 'git log';
-# any may be a prefixed root, author
+# used by default to filter 'git log',
+# or flags, each indicating an option;
+# any may be a prefixed root or author
 # or commit object name for 'git show'
 
 BEGIN { # incl. entire list stage

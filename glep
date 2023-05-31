@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v1.10.1
+# glep v1.10.2
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -25,7 +25,7 @@
 BEGIN { # incl. entire list stage
 
   defaults_set() # dir_root - root directory
-                 # specials - specially formatted search terms
+                 # variants - specially formatted search terms or flags
                  # txt_help - help text
 
   stage = stage ? stage : "list"
@@ -39,39 +39,39 @@ BEGIN { # incl. entire list stage
     # handle any options
     for(i = 1; i < length(ARGV); i++) {
       # consolidate if not specially formatted
-      split(ARGV[i], base_arr, specials["pre"])
-      if(length(base_arr[2]) != length(ARGV[i]) - length(specials["pre"])) {
+      split(ARGV[i], base_arr, variants["pre"])
+      if(length(base_arr[2]) != length(ARGV[i]) - length(variants["pre"])) {
         terms_arr[j++] = ARGV[i]
         continue
       }
       # extract if root directory
-      term_root = term_extract(ARGV[i], specials["root"]["pre"])
+      term_root = term_extract(ARGV[i], variants["terms"]["root"]["pre"])
       if(term_root) {
         split(term_root, path_arr, "/")
         dir_root = !length(path_arr[length(path_arr)]) ? term_root : term_root "/"
         continue
       }
       # extract if commit object name
-      if(specials["name"]["len"] == length(ARGV[i])) {
-        term_name = term_extract(ARGV[i], specials["name"]["pre"])
+      if(variants["terms"]["name"]["len"] == length(ARGV[i])) {
+        term_name = term_extract(ARGV[i], variants["terms"]["name"]["pre"])
         if(term_name) {
           name_str = term_name
           continue
         }
       }
       # extract if author
-      term_auth = term_extract(ARGV[i], specials["auth"]["pre"])
+      term_auth = term_extract(ARGV[i], variants["terms"]["auth"]["pre"])
       if(term_auth) {
         auth_str = term_auth
         continue
       }
       # handle if regexp extended flag
-      if(options["rgxe"]["word"] == ARGV[i] || options["rgxe"]["char"] == ARGV[i]) {
+      if(variants["flags"]["rgxe"]["word"] == ARGV[i] || variants["flags"]["rgxe"]["char"] == ARGV[i]) {
         rgxe_str = "true"
         continue
       }
       # handle if help flag
-      if(options["help"]["word"] == ARGV[i] || options["help"]["char"] == ARGV[i]) help_display()
+      if(variants["flags"]["help"]["word"] == ARGV[i] || variants["flags"]["help"]["char"] == ARGV[i]) help_display()
       # else consolidate
       terms_arr[j++] = ARGV[i]
     }
@@ -122,60 +122,63 @@ BEGIN { # incl. entire list stage
 
 # initialize default values
 function defaults_set() {
+
   # general
   dir_root = root ? root : "../"
+
   # special term formats and options
-  specials["pre"] = "="
+  variants["pre"] = "="
   # - root directory
-  specials["root"]["pre"] = specials["pre"] ">"
-  specials["root"]["var"] = "path_to_root"
-  specials["root"]["exp"] = "an alternative root directory (currently '" dir_root "')"
+  variants["terms"]["root"]["pre"] = variants["pre"] ">"
+  variants["terms"]["root"]["var"] = "path_to_root"
+  variants["terms"]["root"]["exp"] = "an alternative root directory (currently '" dir_root "')"
   # - commit object name
-  specials["name"]["pre"] = specials["pre"] "#"
-  specials["name"]["stem_len"] = 7 # commit object name ([0-9a-f]{7})
-  specials["name"]["len"] = length(specials["name"]["pre"]) + specials["name"]["stem_len"]
-  specials["name"]["var"] = "commit_object_name"
-  specials["name"]["exp"] = "a " specials["name"]["stem_len"] "-character hexadecimal commit object name"
+  variants["terms"]["name"]["pre"] = variants["pre"] "#"
+  variants["terms"]["name"]["stem_len"] = 7 # commit object name ([0-9a-f]{7})
+  variants["terms"]["name"]["len"] = length(variants["terms"]["name"]["pre"]) + variants["terms"]["name"]["stem_len"]
+  variants["terms"]["name"]["var"] = "commit_object_name"
+  variants["terms"]["name"]["exp"] = "a " variants["terms"]["name"]["stem_len"] "-character hexadecimal commit object name"
   # - author
-  specials["auth"]["pre"] = specials["pre"] "@"
-  specials["auth"]["var"] = "author"
-  specials["auth"]["exp"] = "the commit author"
+  variants["terms"]["auth"]["pre"] = variants["pre"] "@"
+  variants["terms"]["auth"]["var"] = "author"
+  variants["terms"]["auth"]["exp"] = "the commit author"
   # - regexp extended
-  options["rgxe"]["char"] = specials["pre"] "e"
-  options["rgxe"]["word"] = specials["pre"] "regexp-extended"
-  options["rgxe"]["desc"] = "use extended regular expressions in search terms"
+  variants["flags"]["rgxe"]["char"] = variants["pre"] "e"
+  variants["flags"]["rgxe"]["word"] = variants["pre"] "regexp-extended"
+  variants["flags"]["rgxe"]["desc"] = "use extended regular expressions in search terms"
   # - help
-  options["help"]["char"] = specials["pre"] "h"
-  options["help"]["word"] = specials["pre"] "help"
-  options["help"]["desc"] = "show usage, terms and flags then exit"
+  variants["flags"]["help"]["char"] = variants["pre"] "h"
+  variants["flags"]["help"]["word"] = variants["pre"] "help"
+  variants["flags"]["help"]["desc"] = "show usage, terms and flags then exit"
+
   # help text
-  txt_usage = "Usage: glep <search_term>[ ...] [" options["rgxe"]["word"] "/" options["rgxe"]["char"] "] / " options["help"]["word"] "/" options["help"]["char"] "\n"
+  txt_usage = "Usage: glep <search_term>[ ...] [" variants["flags"]["rgxe"]["word"] "/" variants["flags"]["rgxe"]["char"] "] / " variants["flags"]["help"]["word"] "/" variants["flags"]["help"]["char"] "\n"
   txt_terms = "Terms:\n Any search term may be one of the following prefixed instances:\n"
   # - get max term parts length for term line spacing
-  for(item in specials) {
+  for(item in variants["terms"]) {
     if(item == "pre") continue
-    parts_l = length(specials[item]["pre"]) + length(specials[item]["var"])
+    parts_l = length(variants["terms"][item]["pre"]) + length(variants["terms"][item]["var"])
     space_c = parts_l > space_c ? parts_l : space_c
   }
   # - add term lines
-  for(item in specials) {
+  for(item in variants["terms"]) {
     if(item == "pre") continue
-    parts_l = length(specials[item]["pre"]) + length(specials[item]["var"])
+    parts_l = length(variants["terms"][item]["pre"]) + length(variants["terms"][item]["var"])
     spacing = sprintf("%" space_c - parts_l + 2 "s", "")
-    txt_terms = txt_terms "  " specials[item]["pre"] "<" specials[item]["var"] ">" spacing specials[item]["exp"] "\n"
+    txt_terms = txt_terms "  " variants["terms"][item]["pre"] "<" variants["terms"][item]["var"] ">" spacing variants["terms"][item]["exp"] "\n"
   }
   txt_flags = "Flags:\n"
   # - get max flag pair length for flag line spacing
-  for(item in options) {
-    pairs_l = length(options[item]["char"]) + 2 + length(options[item]["word"])
+  for(item in variants["flags"]) {
+    pairs_l = length(variants["flags"][item]["char"]) + 2 + length(variants["flags"][item]["word"])
     space_c = pairs_l > space_c ? pairs_l : space_c
   }
   # - add flag lines
-  for(item in options) {
-    pairs_l = length(options[item]["char"]) + 2 + length(options[item]["word"])
+  for(item in variants["flags"]) {
+    pairs_l = length(variants["flags"][item]["char"]) + 2 + length(variants["flags"][item]["word"])
     spacing = sprintf("%" space_c - pairs_l + 2 "s", "")
-    txt_flags = txt_flags "  " options[item]["char"] ", " options[item]["word"] spacing options[item]["desc"]
-    item_c++; if(item_c != length(options)) txt_flags = txt_flags "\n"
+    txt_flags = txt_flags "  " variants["flags"][item]["char"] ", " variants["flags"][item]["word"] spacing variants["flags"][item]["desc"]
+    item_c++; if(item_c != length(variants["flags"])) txt_flags = txt_flags "\n"
   }
   txt_help  = txt_usage txt_terms txt_flags
 }

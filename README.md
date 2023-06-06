@@ -57,4 +57,5 @@ The hashbang at the top of the file assumes the presence of AWK in '/usr/bin', t
 The following can be passed to `glep` as if a search term:
 
 - `=regexp-extended` / `=e`, to use extended regular expressions in search terms
+- `=preview` / `=p`, to show but not run the command for the root directory only then exit
 - `=help` / `=h`, to show usage, terms and flags then exit

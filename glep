@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v1.10.3
+# glep v1.10.4
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -96,10 +96,10 @@ BEGIN { # incl. entire list stage
   if("grep" == stage) {
     # build grep string for terms passed
     cmd_grep_col = !name ? "always" : "never"
-    cmd_grep_ext = !rgxe ? ""       : "-E"
+    cmd_grep_ext = !rgxe ? ""       : " -E"
     split(terms, terms_arr, ",")
     for(i = 1; i <= length(terms_arr); i++) {
-      cmd_grep = cmd_grep " | grep --color=" cmd_grep_col " " cmd_grep_ext " \"" terms_arr[i] "\""
+      cmd_grep = cmd_grep " | grep --color=" cmd_grep_col cmd_grep_ext " \"" terms_arr[i] "\""
     }
     # run commands for root directory
     grep_perform(dir_root)
@@ -202,12 +202,13 @@ function grep_perform(dir_dest) {
   # set full command then run:
   # - for 'git log' if no commit object name
   if(!name) {
-    cmd_full = cmd_find "&& matches=$("\
-                                      "git log --branches=*"\
-                                             " --author=" auth\
-                                             " --oneline"\
-                                             " --format=\"%S | %as %an | %h %s\"" cmd_grep\
-                                    ") "\
+    cmd_auth = auth ? " --author=" auth : ""
+    cmd_full = cmd_find " && matches=$("\
+                                       "git log --branches=*"\
+                                              cmd_auth\
+                                              " --oneline"\
+                                              " --format=\"%S | %as %an | %h %s\"" cmd_grep\
+                                     ") "\
                         "&& cd - > /dev/null "\
                         "&& echo \"$matches\" | glep -v stage=echo"\
                                                    " -v path=" dir_dest
@@ -215,7 +216,7 @@ function grep_perform(dir_dest) {
   }
   # - for 'git show' otherwise, allowing for use of SIGINT
   else {
-    cmd_full = cmd_find "&& git show --color=always " name " 2> /dev/null " cmd_grep
+    cmd_full = cmd_find " && git show --color=always " name " 2> /dev/null" cmd_grep
     system(cmd_full)
   }
 }

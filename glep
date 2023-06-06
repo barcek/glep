@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v1.10.4
+# glep v1.11.0
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -71,6 +71,11 @@ BEGIN { # incl. entire list stage
         rgxe_str = "true"
         continue
       }
+      # handle if preview flag
+      if(variants["flags"]["prvw"]["word"] == ARGV[i] || variants["flags"]["prvw"]["char"] == ARGV[i]) {
+        prvw_str = "true"
+        continue
+      }
       # handle if help flag
       if(variants["flags"]["help"]["word"] == ARGV[i] || variants["flags"]["help"]["char"] == ARGV[i]) help_display()
       # else consolidate
@@ -86,6 +91,7 @@ BEGIN { # incl. entire list stage
       "ls -F " dir_root " | glep -v stage=grep"\
                                " -v terms=" terms_str\
                                " -v  rgxe="  rgxe_str\
+                               " -v  prvw="  prvw_str\
                                " -v  root="  dir_root\
                                " -v  name="  name_str\
                                " -v  auth="  auth_str\
@@ -151,9 +157,13 @@ function defaults_set() {
   variants["flags"]["help"]["char"] = variants["pre"] "h"
   variants["flags"]["help"]["word"] = variants["pre"] "help"
   variants["flags"]["help"]["desc"] = "show usage, terms and flags then exit"
+  # - preview
+  variants["flags"]["prvw"]["char"] = variants["pre"] "p"
+  variants["flags"]["prvw"]["word"] = variants["pre"] "preview"
+  variants["flags"]["prvw"]["desc"] = "show but not run the command for the root directory only then exit"
 
   # help text
-  txt_usage = "Usage: glep <search_term>[ ...] [" variants["flags"]["rgxe"]["word"] "/" variants["flags"]["rgxe"]["char"] "] / " variants["flags"]["help"]["word"] "/" variants["flags"]["help"]["char"] "\n"
+  txt_usage = "Usage: glep <search_term>[ ...] [" variants["flags"]["rgxe"]["word"] "/" variants["flags"]["rgxe"]["char"] "] [" variants["flags"]["prvw"]["word"] "/" variants["flags"]["prvw"]["char"] "] / " variants["flags"]["help"]["word"] "/" variants["flags"]["help"]["char"] "\n"
   txt_terms = "Terms:\n Any search term may be one of the following prefixed instances:\n"
   # - get max term parts length for term line spacing
   for(item in variants["terms"]) {
@@ -212,11 +222,13 @@ function grep_perform(dir_dest) {
                         "&& cd - > /dev/null "\
                         "&& echo \"$matches\" | glep -v stage=echo"\
                                                    " -v path=" dir_dest
+    if(prvw) { print cmd_full; exit 0 }
     while((cmd_full) | getline line) print line
   }
   # - for 'git show' otherwise, allowing for use of SIGINT
   else {
     cmd_full = cmd_find " && git show --color=always " name " 2> /dev/null" cmd_grep
+    if(prvw) { print cmd_full; exit 0 }
     system(cmd_full)
   }
 }

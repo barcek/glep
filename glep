@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v1.11.1
+# glep v1.11.2
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -127,12 +127,51 @@ BEGIN { # incl. entire list stage
 
 # UTILS
 
+# build and run pipeline performing grep stage tasks
+function grep_perform(dir_dest) {
+  # set base command to find git directory
+  cmd_find = "cd " dir_dest " && ls -a | grep -E '^.git$' > /dev/null"
+  # set full command then run:
+  # - for 'git log' if no commit object name
+  if(!name) {
+    cmd_auth = auth ? " --author=" auth : ""
+    cmd_full = cmd_find " && matches=$("\
+                                       "git log --branches=*"\
+                                              cmd_auth\
+                                              " --oneline"\
+                                              " --format=\"%S | %as %an | %h %s\"" cmd_grep\
+                                     ") "\
+                        "&& cd - > /dev/null "\
+                        "&& echo \"$matches\" | glep -v stage=echo"\
+                                                   " -v path=" dir_dest
+    if(prvw) { print cmd_full; exit 0 }
+    while((cmd_full) | getline line) print line
+  }
+  # - for 'git show' otherwise, allowing for use of SIGINT
+  else {
+    cmd_full = cmd_find " && git show --color=always " name " 2> /dev/null" cmd_grep
+    if(prvw) { print cmd_full; exit 0 }
+    system(cmd_full)
+  }
+}
+
+# return term unprefixed if special else empty string
+function term_extract(arg, pre) {
+  split(arg, arr, pre)
+  return length(arr[2]) == length(arg) - length(pre) ? arr[2] : ""
+}
+
+# print help text with any error message then exit
+function help_display(msg_err) {
+  if(msg_err) print "Error: " msg_err > "/dev/stderr"
+  print txt_help > "/dev/stderr"
+  exit msg_err ? 1 : 0
+}
+
 # initialize default values
 function defaults_set() {
-
   # general
   dir_root = root ? root : "../"
-
   # special term formats and options
   variants["pre"] = "="
   # - root directory
@@ -161,7 +200,6 @@ function defaults_set() {
   variants["flags"]["prvw"]["char"] = variants["pre"] "p"
   variants["flags"]["prvw"]["word"] = variants["pre"] "preview"
   variants["flags"]["prvw"]["desc"] = "show but not run the command for the root directory only then exit"
-
   # help text
   txt_usage = "Usage: glep <search_term>[ ...] [" variants["flags"]["rgxe"]["word"] "/" variants["flags"]["rgxe"]["char"] "] [" variants["flags"]["prvw"]["word"] "/" variants["flags"]["prvw"]["char"] "] / " variants["flags"]["help"]["word"] "/" variants["flags"]["help"]["char"] "\n"
   txt_terms = "Terms:\n Any search term may be one of the following prefixed instances:\n"
@@ -191,45 +229,5 @@ function defaults_set() {
     txt_flags = txt_flags "  " variants["flags"][item]["char"] ", " variants["flags"][item]["word"] spacing variants["flags"][item]["desc"]
     item_c++; if(item_c != length(variants["flags"])) txt_flags = txt_flags "\n"
   }
-  txt_help  = txt_usage txt_terms txt_flags
-}
-
-function help_display(msg_err) {
-  if(msg_err) print "Error: " msg_err > "/dev/stderr"
-  print txt_help > "/dev/stderr"
-  exit msg_err ? 1 : 0
-}
-
-# return term unprefixed if special else empty string
-function term_extract(arg, pre) {
-  split(arg, arr, pre)
-  return length(arr[2]) == length(arg) - length(pre) ? arr[2] : ""
-}
-
-# build and run pipeline performing grep stage tasks
-function grep_perform(dir_dest) {
-  # set base command to find git directory
-  cmd_find = "cd " dir_dest " && ls -a | grep -E '^.git$' > /dev/null"
-  # set full command then run:
-  # - for 'git log' if no commit object name
-  if(!name) {
-    cmd_auth = auth ? " --author=" auth : ""
-    cmd_full = cmd_find " && matches=$("\
-                                       "git log --branches=*"\
-                                              cmd_auth\
-                                              " --oneline"\
-                                              " --format=\"%S | %as %an | %h %s\"" cmd_grep\
-                                     ") "\
-                        "&& cd - > /dev/null "\
-                        "&& echo \"$matches\" | glep -v stage=echo"\
-                                                   " -v path=" dir_dest
-    if(prvw) { print cmd_full; exit 0 }
-    while((cmd_full) | getline line) print line
-  }
-  # - for 'git show' otherwise, allowing for use of SIGINT
-  else {
-    cmd_full = cmd_find " && git show --color=always " name " 2> /dev/null" cmd_grep
-    if(prvw) { print cmd_full; exit 0 }
-    system(cmd_full)
-  }
+  txt_help = txt_usage txt_terms txt_flags
 }

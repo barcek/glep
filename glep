@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v1.11.0
+# glep v1.11.1
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -34,7 +34,7 @@ BEGIN { # incl. entire list stage
   if("list" == stage) {
 
     # handle non-provision of search terms
-    if(ARGC < 2) help_display()
+    if(ARGC < 2) help_display("No search term provided")
 
     # extract any specially formatted search terms, consolidating remaining, and
     # handle any options
@@ -194,9 +194,10 @@ function defaults_set() {
   txt_help  = txt_usage txt_terms txt_flags
 }
 
-function help_display() {
+function help_display(msg_err) {
+  if(msg_err) print "Error: " msg_err > "/dev/stderr"
   print txt_help > "/dev/stderr"
-  exit 1
+  exit msg_err ? 1 : 0
 }
 
 # return term unprefixed if special else empty string

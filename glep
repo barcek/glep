@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v1.12.1
+# glep v1.13.0
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -63,7 +63,7 @@ BEGIN { # incl. entire list stage
         auth_str = term_auth
         continue
       }
-      # get value for or handle option flag - regexp extended, preview, help, test
+      # get value for or handle option flag - regexp extended, preview, version, help, test
       if(variants["f"]["rgxe"]["word"] == ARGV[i] || variants["f"]["rgxe"]["char"] == ARGV[i]) {
         rgxe_str = "true"
         continue
@@ -72,6 +72,7 @@ BEGIN { # incl. entire list stage
         prvw_str = "true"
         continue
       }
+      if(variants["f"]["vrsn"]["word"] == ARGV[i] || variants["f"]["vrsn"]["char"] == ARGV[i]) vrsn_display()
       if(variants["f"]["help"]["word"] == ARGV[i] || variants["f"]["help"]["char"] == ARGV[i]) help_display()
       if(variants["f"]["test"]["word"] == ARGV[i] || variants["f"]["test"]["char"] == ARGV[i]) test_perform()
       # else consolidate
@@ -157,6 +158,12 @@ function term_extract(arg, pre) {
   return length(arr[2]) == length(arg) - length(pre) ? arr[2] : ""
 }
 
+# run pipeline to print name and version number then exit
+function vrsn_display() {
+  system("cat glep | head -n 3 | tail -n 1 | awk '{ print $2 \" \" $3}'")
+  exit 0
+}
+
 # print help text with any error message then exit
 function help_display(msg_err) {
   if(msg_err) print "Error: " msg_err > "/dev/stderr"
@@ -192,6 +199,10 @@ function defaults_set() {
   variants["f"]["prvw"]["char"] = variants["pre"] "p"
   variants["f"]["prvw"]["word"] = variants["pre"] "preview"
   variants["f"]["prvw"]["desc"] = "show but not run the command for the root directory only then exit"
+  # - version
+  variants["f"]["vrsn"]["char"] = variants["pre"] "v"
+  variants["f"]["vrsn"]["word"] = variants["pre"] "version"
+  variants["f"]["vrsn"]["desc"] = "show name and version number then exit"
   # - help
   variants["f"]["help"]["char"] = variants["pre"] "h"
   variants["f"]["help"]["word"] = variants["pre"] "help"
@@ -202,10 +213,12 @@ function defaults_set() {
   variants["f"]["test"]["desc"] = "perform the self-test then exit"
   # help text
   txt_usage = "Usage: glep <search_term>[ ...] "\
-               "[" variants["f"]["rgxe"]["word"] "/" variants["f"]["rgxe"]["char"] "] "\
-               "[" variants["f"]["prvw"]["word"] "/" variants["f"]["prvw"]["char"] "] "\
-              "/ " variants["f"]["help"]["word"] "/" variants["f"]["help"]["char"] " "\
-              "/ " variants["f"]["test"]["word"] "/" variants["f"]["test"]["char"] "\n"
+                "["  variants["f"]["rgxe"]["word"] "/" variants["f"]["rgxe"]["char"] "] "\
+                "["  variants["f"]["prvw"]["word"] "/" variants["f"]["prvw"]["char"] "]\n"\
+              "            "\
+                "/ " variants["f"]["vrsn"]["word"] "/" variants["f"]["vrsn"]["char"] " "\
+                "/ " variants["f"]["help"]["word"] "/" variants["f"]["help"]["char"] " "\
+                "/ " variants["f"]["test"]["word"] "/" variants["f"]["test"]["char"] "\n"
   txt_terms = "Terms:\n Any search term may be one of the following prefixed instances:\n"
   # - get max term parts length for term line spacing
   for(item in variants["t"]) {

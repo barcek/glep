@@ -50,12 +50,18 @@ If this is the sole search term provided, the entire diff for that commit is sho
 
 The script invokes itself and is assumed in doing so to have been made both executable, via a command like `chmod +x glep`, and available from any directory, e.g. by placing it in the '/bin' or '/usr/bin' directory.
 
-The hashbang at the top of the file assumes the presence of AWK in '/usr/bin', the source code that this is in fact Gawk and that several other utils and Git itself are installed. A list can be found close to the top of the file.
+The hashbang at the top of the file assumes the presence of AWK in '/usr/bin', the source code that this is in fact Gawk and that several other utils and Git itself are installed. A list can be found close to the top of the file, as well as in the help text.
+
+### Making changes
+
+Running the self-test after making changes plus extending or adding test cases to cover new behaviour is recommended. The self-test is run with the `=test` or `=T` flag (see [Options](#options) below). The test cases are set in the `test_perform` function at the base of the file.
 
 ## Options
 
 The following can be passed to `glep` as if a search term:
 
 - `=regexp-extended` / `=e`, to use extended regular expressions in search terms
-- `=preview` / `=p`, to show but not run the command for the root directory only then exit
+- `=preview` / `=p`, to show the command for the root directory then exit
+- `=version` / `=v`, to show name and version number then exit
 - `=help` / `=h`, to show usage, terms and flags then exit
+- `=test` / `=T`, to perform the self-test then exit

@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v1.11.2
+# glep v1.12.0
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -78,6 +78,8 @@ BEGIN { # incl. entire list stage
       }
       # handle if help flag
       if(variants["flags"]["help"]["word"] == ARGV[i] || variants["flags"]["help"]["char"] == ARGV[i]) help_display()
+      # handle if test flag
+      if(variants["flags"]["test"]["word"] == ARGV[i] || variants["flags"]["test"]["char"] == ARGV[i]) test_perform()
       # else consolidate
       terms_arr[j++] = ARGV[i]
     }
@@ -192,16 +194,20 @@ function defaults_set() {
   variants["flags"]["rgxe"]["char"] = variants["pre"] "e"
   variants["flags"]["rgxe"]["word"] = variants["pre"] "regexp-extended"
   variants["flags"]["rgxe"]["desc"] = "use extended regular expressions in search terms"
-  # - help
-  variants["flags"]["help"]["char"] = variants["pre"] "h"
-  variants["flags"]["help"]["word"] = variants["pre"] "help"
-  variants["flags"]["help"]["desc"] = "show usage, terms and flags then exit"
   # - preview
   variants["flags"]["prvw"]["char"] = variants["pre"] "p"
   variants["flags"]["prvw"]["word"] = variants["pre"] "preview"
   variants["flags"]["prvw"]["desc"] = "show but not run the command for the root directory only then exit"
+  # - help
+  variants["flags"]["help"]["char"] = variants["pre"] "h"
+  variants["flags"]["help"]["word"] = variants["pre"] "help"
+  variants["flags"]["help"]["desc"] = "show usage, terms and flags then exit"
+  # - test
+  variants["flags"]["test"]["char"] = variants["pre"] "T"
+  variants["flags"]["test"]["word"] = variants["pre"] "test"
+  variants["flags"]["test"]["desc"] = "perform the self-test then exit"
   # help text
-  txt_usage = "Usage: glep <search_term>[ ...] [" variants["flags"]["rgxe"]["word"] "/" variants["flags"]["rgxe"]["char"] "] [" variants["flags"]["prvw"]["word"] "/" variants["flags"]["prvw"]["char"] "] / " variants["flags"]["help"]["word"] "/" variants["flags"]["help"]["char"] "\n"
+  txt_usage = "Usage: glep <search_term>[ ...] [" variants["flags"]["rgxe"]["word"] "/" variants["flags"]["rgxe"]["char"] "] [" variants["flags"]["prvw"]["word"] "/" variants["flags"]["prvw"]["char"] "] / " variants["flags"]["help"]["word"] "/" variants["flags"]["help"]["char"] " / " variants["flags"]["test"]["word"] "/" variants["flags"]["test"]["char"] "\n"
   txt_terms = "Terms:\n Any search term may be one of the following prefixed instances:\n"
   # - get max term parts length for term line spacing
   for(item in variants["terms"]) {
@@ -230,4 +236,43 @@ function defaults_set() {
     item_c++; if(item_c != length(variants["flags"])) txt_flags = txt_flags "\n"
   }
   txt_help = txt_usage txt_terms txt_flags
+}
+
+function test_case_run(desc, glep, expt) {
+  glep | getline rslt
+  print rslt == expt ? "PASS: " desc : "FAIL: " desc " | expected " rslt " to equal " expt
+}
+
+function test_perform() {
+
+  glep_log_base = "glep =preview a b"
+  expt_log_base = "cd ../ && ls -a | grep -E '^.git$' > /dev/null && matches=$(git log --branches=* --oneline --format=\"%S | %as %an | %h %s\" | grep --color=always \"a\" | grep --color=always \"b\") && cd - > /dev/null && echo \"$matches\" | glep -v stage=echo -v path=../"
+
+  glep_log_word = "glep =preview a b =@test \"=>./\" =regexp-extended"
+  expt_log_word = "cd ./ && ls -a | grep -E '^.git$' > /dev/null && matches=$(git log --branches=* --author=test --oneline --format=\"%S | %as %an | %h %s\" | grep --color=always -E \"a\" | grep --color=always -E \"b\") && cd - > /dev/null && echo \"$matches\" | glep -v stage=echo -v path=./"
+
+  glep_log_char = "glep =p a b =e"
+  expt_log_char = "cd ../ && ls -a | grep -E '^.git$' > /dev/null && matches=$(git log --branches=* --oneline --format=\"%S | %as %an | %h %s\" | grep --color=always -E \"a\" | grep --color=always -E \"b\") && cd - > /dev/null && echo \"$matches\" | glep -v stage=echo -v path=../"
+
+  glep_show_base = "glep =preview a b =#0a1b2c3"
+  expt_show_base = "cd ../ && ls -a | grep -E '^.git$' > /dev/null && git show --color=always 0a1b2c3 2> /dev/null | grep --color=never \"a\" | grep --color=never \"b\""
+
+  glep_show_word = "glep =preview a b =#0a1b2c3 =@test \"=>./\" =regexp-extended"
+  expt_show_word = "cd ./ && ls -a | grep -E '^.git$' > /dev/null && git show --color=always 0a1b2c3 2> /dev/null | grep --color=never -E \"a\" | grep --color=never -E \"b\""
+
+  glep_show_char = "glep =p a b =#0a1b2c3 =e"
+  expt_show_char = "cd ../ && ls -a | grep -E '^.git$' > /dev/null && git show --color=always 0a1b2c3 2> /dev/null | grep --color=never -E \"a\" | grep --color=never -E \"b\""
+
+  glep_str_none = "glep 2>&1 | head -n 1"
+  expt_str_none = "Error: No search term provided"
+
+  test_case_run("log/base",  glep_log_base,  expt_log_base)
+  test_case_run("log/word",  glep_log_word,  expt_log_word)
+  test_case_run("log/char",  glep_log_char,  expt_log_char)
+  test_case_run("show/base", glep_show_base, expt_show_base)
+  test_case_run("show/word", glep_show_word, expt_show_word)
+  test_case_run("show/char", glep_show_char, expt_show_char)
+  test_case_run("str/none",  glep_str_none,  expt_str_none)
+
+  exit 0
 }

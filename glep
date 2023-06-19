@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v1.13.1
+# glep v1.13.2
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -8,7 +8,8 @@
 
 # Assumes the use of a POSIX shell and
 # the presence of AWK (Gawk) and Git,
-# plus command, grep and ls
+# plus command, fold, grep, head, ls,
+# sed, tail and tr
 
 # Run three times per initial command,
 # each run being a single named stage,
@@ -198,7 +199,7 @@ function defaults_set() {
   # - preview
   variants["f"]["prvw"]["char"] = variants["pre"] "p"
   variants["f"]["prvw"]["word"] = variants["pre"] "preview"
-  variants["f"]["prvw"]["desc"] = "show but not run the command for the root directory only then exit"
+  variants["f"]["prvw"]["desc"] = "show the command for the root directory then exit"
   # - version
   variants["f"]["vrsn"]["char"] = variants["pre"] "v"
   variants["f"]["vrsn"]["word"] = variants["pre"] "version"
@@ -243,10 +244,19 @@ function defaults_set() {
   for(item in variants["f"]) {
     pairs_l = length(variants["f"][item]["char"]) + 2 + length(variants["f"][item]["word"])
     spacing = sprintf("%" space_c - pairs_l + 2 "s", "")
-    txt_flags = txt_flags "  " variants["f"][item]["char"] ", " variants["f"][item]["word"] spacing variants["f"][item]["desc"]
-    item_c++; if(item_c != length(variants["f"])) txt_flags = txt_flags "\n"
+    txt_flags = txt_flags "  " variants["f"][item]["char"] ", " variants["f"][item]["word"] spacing variants["f"][item]["desc"] "\n"
   }
-  txt_help = txt_usage txt_terms txt_flags
+  # - add summary lines
+  "head -n 22 $(command -v glep) | tail -n 1 | tr -d '\n#'" | getline txt_smry_body_1
+  "head -n 25 $(command -v glep) | tail -n 1 | tr -d '\n#' | sed 's/ or / and with a /' | sed 's/for //'" | getline txt_smry_body_2
+  txt_smry = "Summary:\n Search terms are" txt_smry_body_1 "\n" txt_smry_body_2 "\n"
+  # - add context lines
+  "head -n 12 $(command -v glep) | tail -n 4 | tr -d '\n#' | fold -sw 75 | tr '\n' '#'" | getline txt_ctxt_body
+  gsub(/#/, "\n ", txt_ctxt_body)
+  txt_ctxt = "Context:\n" txt_ctxt_body
+  # - combine
+  txt_help = txt_usage txt_terms txt_flags txt_smry txt_ctxt
+
 }
 
 function test_case_run(desc, glep, expt) {

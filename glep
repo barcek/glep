@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v1.12.0
+# glep v1.12.1
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -25,8 +25,8 @@
 
 BEGIN { # incl. entire list stage
 
-  defaults_set() # dir_root - root directory
-                 # variants - specially formatted search terms or flags
+  defaults_set() # root_str - root directory
+                 # variants - specially formatted search terms (t) and option flags (f)
                  # txt_help - help text
 
   stage = stage ? stage : "list"
@@ -36,50 +36,44 @@ BEGIN { # incl. entire list stage
     # handle non-provision of search terms
     if(ARGC < 2) help_display("No search term provided")
 
-    # extract any specially formatted search terms, consolidating remaining, and
-    # handle any options
+    # get values for any specially formatted terms or flags, consolidating remaining
     for(i = 1; i < length(ARGV); i++) {
-      # consolidate if not specially formatted
+      # consolidate then continue if not specially formatted
       split(ARGV[i], base_arr, variants["pre"])
       if(length(base_arr[2]) != length(ARGV[i]) - length(variants["pre"])) {
         terms_arr[j++] = ARGV[i]
         continue
       }
-      # extract if root directory
-      term_root = term_extract(ARGV[i], variants["terms"]["root"]["pre"])
-      if(term_root) {
-        split(term_root, path_arr, "/")
-        dir_root = !length(path_arr[length(path_arr)]) ? term_root : term_root "/"
-        continue
-      }
-      # extract if commit object name
-      if(variants["terms"]["name"]["len"] == length(ARGV[i])) {
-        term_name = term_extract(ARGV[i], variants["terms"]["name"]["pre"])
+      # get value for specially formatted term - root directory, commit object name, author
+      if(variants["t"]["name"]["len"] == length(ARGV[i])) {
+        term_name = term_extract(ARGV[i], variants["t"]["name"]["pre"])
         if(term_name) {
           name_str = term_name
           continue
         }
       }
-      # extract if author
-      term_auth = term_extract(ARGV[i], variants["terms"]["auth"]["pre"])
+      term_root = term_extract(ARGV[i], variants["t"]["root"]["pre"])
+      if(term_root) {
+        split(term_root, path_arr, "/")
+        root_str = !length(path_arr[length(path_arr)]) ? term_root : term_root "/"
+        continue
+      }
+      term_auth = term_extract(ARGV[i], variants["t"]["auth"]["pre"])
       if(term_auth) {
         auth_str = term_auth
         continue
       }
-      # handle if regexp extended flag
-      if(variants["flags"]["rgxe"]["word"] == ARGV[i] || variants["flags"]["rgxe"]["char"] == ARGV[i]) {
+      # get value for or handle option flag - regexp extended, preview, help, test
+      if(variants["f"]["rgxe"]["word"] == ARGV[i] || variants["f"]["rgxe"]["char"] == ARGV[i]) {
         rgxe_str = "true"
         continue
       }
-      # handle if preview flag
-      if(variants["flags"]["prvw"]["word"] == ARGV[i] || variants["flags"]["prvw"]["char"] == ARGV[i]) {
+      if(variants["f"]["prvw"]["word"] == ARGV[i] || variants["f"]["prvw"]["char"] == ARGV[i]) {
         prvw_str = "true"
         continue
       }
-      # handle if help flag
-      if(variants["flags"]["help"]["word"] == ARGV[i] || variants["flags"]["help"]["char"] == ARGV[i]) help_display()
-      # handle if test flag
-      if(variants["flags"]["test"]["word"] == ARGV[i] || variants["flags"]["test"]["char"] == ARGV[i]) test_perform()
+      if(variants["f"]["help"]["word"] == ARGV[i] || variants["f"]["help"]["char"] == ARGV[i]) help_display()
+      if(variants["f"]["test"]["word"] == ARGV[i] || variants["f"]["test"]["char"] == ARGV[i]) test_perform()
       # else consolidate
       terms_arr[j++] = ARGV[i]
     }
@@ -90,11 +84,11 @@ BEGIN { # incl. entire list stage
     }
     # pipe list of dirnames to grep stage
     system(\
-      "ls -F " dir_root " | glep -v stage=grep"\
+      "ls -F " root_str " | glep -v stage=grep"\
                                " -v terms=" terms_str\
                                " -v  rgxe="  rgxe_str\
                                " -v  prvw="  prvw_str\
-                               " -v  root="  dir_root\
+                               " -v  root="  root_str\
                                " -v  name="  name_str\
                                " -v  auth="  auth_str\
     )
@@ -110,7 +104,7 @@ BEGIN { # incl. entire list stage
       cmd_grep = cmd_grep " | grep --color=" cmd_grep_col cmd_grep_ext " \"" terms_arr[i] "\""
     }
     # run commands for root directory
-    grep_perform(dir_root)
+    grep_perform(root_str)
   }
 }
 
@@ -118,7 +112,7 @@ BEGIN { # incl. entire list stage
 
 "grep" == stage && $0 ~ /\/$/ {
   # run commands for next subdirectory
-  dir_next = dir_root $0
+  dir_next = root_str $0
   grep_perform(dir_next)
 }
 
@@ -173,67 +167,71 @@ function help_display(msg_err) {
 # initialize default values
 function defaults_set() {
   # general
-  dir_root = root ? root : "../"
-  # special term formats and options
+  root_str = root ? root : "../"
+  # specially formatted search terms (t) and option flags (f)
   variants["pre"] = "="
   # - root directory
-  variants["terms"]["root"]["pre"] = variants["pre"] ">"
-  variants["terms"]["root"]["var"] = "path_to_root"
-  variants["terms"]["root"]["exp"] = "an alternative root directory (currently '" dir_root "')"
+  variants["t"]["root"]["pre"] = variants["pre"] ">"
+  variants["t"]["root"]["var"] = "path_to_root"
+  variants["t"]["root"]["exp"] = "an alternative root directory (currently '" root_str "')"
   # - commit object name
-  variants["terms"]["name"]["pre"] = variants["pre"] "#"
-  variants["terms"]["name"]["stem_len"] = 7 # commit object name ([0-9a-f]{7})
-  variants["terms"]["name"]["len"] = length(variants["terms"]["name"]["pre"]) + variants["terms"]["name"]["stem_len"]
-  variants["terms"]["name"]["var"] = "commit_object_name"
-  variants["terms"]["name"]["exp"] = "a " variants["terms"]["name"]["stem_len"] "-character hexadecimal commit object name"
+  variants["t"]["name"]["pre"] = variants["pre"] "#"
+  variants["t"]["name"]["stem_len"] = 7 # commit object name ([0-9a-f]{7})
+  variants["t"]["name"]["len"] = length(variants["t"]["name"]["pre"]) + variants["t"]["name"]["stem_len"]
+  variants["t"]["name"]["var"] = "commit_object_name"
+  variants["t"]["name"]["exp"] = "a " variants["t"]["name"]["stem_len"] "-character hexadecimal commit object name"
   # - author
-  variants["terms"]["auth"]["pre"] = variants["pre"] "@"
-  variants["terms"]["auth"]["var"] = "author"
-  variants["terms"]["auth"]["exp"] = "the commit author"
+  variants["t"]["auth"]["pre"] = variants["pre"] "@"
+  variants["t"]["auth"]["var"] = "author"
+  variants["t"]["auth"]["exp"] = "the commit author"
   # - regexp extended
-  variants["flags"]["rgxe"]["char"] = variants["pre"] "e"
-  variants["flags"]["rgxe"]["word"] = variants["pre"] "regexp-extended"
-  variants["flags"]["rgxe"]["desc"] = "use extended regular expressions in search terms"
+  variants["f"]["rgxe"]["char"] = variants["pre"] "e"
+  variants["f"]["rgxe"]["word"] = variants["pre"] "regexp-extended"
+  variants["f"]["rgxe"]["desc"] = "use extended regular expressions in search terms"
   # - preview
-  variants["flags"]["prvw"]["char"] = variants["pre"] "p"
-  variants["flags"]["prvw"]["word"] = variants["pre"] "preview"
-  variants["flags"]["prvw"]["desc"] = "show but not run the command for the root directory only then exit"
+  variants["f"]["prvw"]["char"] = variants["pre"] "p"
+  variants["f"]["prvw"]["word"] = variants["pre"] "preview"
+  variants["f"]["prvw"]["desc"] = "show but not run the command for the root directory only then exit"
   # - help
-  variants["flags"]["help"]["char"] = variants["pre"] "h"
-  variants["flags"]["help"]["word"] = variants["pre"] "help"
-  variants["flags"]["help"]["desc"] = "show usage, terms and flags then exit"
+  variants["f"]["help"]["char"] = variants["pre"] "h"
+  variants["f"]["help"]["word"] = variants["pre"] "help"
+  variants["f"]["help"]["desc"] = "show usage, terms and flags then exit"
   # - test
-  variants["flags"]["test"]["char"] = variants["pre"] "T"
-  variants["flags"]["test"]["word"] = variants["pre"] "test"
-  variants["flags"]["test"]["desc"] = "perform the self-test then exit"
+  variants["f"]["test"]["char"] = variants["pre"] "T"
+  variants["f"]["test"]["word"] = variants["pre"] "test"
+  variants["f"]["test"]["desc"] = "perform the self-test then exit"
   # help text
-  txt_usage = "Usage: glep <search_term>[ ...] [" variants["flags"]["rgxe"]["word"] "/" variants["flags"]["rgxe"]["char"] "] [" variants["flags"]["prvw"]["word"] "/" variants["flags"]["prvw"]["char"] "] / " variants["flags"]["help"]["word"] "/" variants["flags"]["help"]["char"] " / " variants["flags"]["test"]["word"] "/" variants["flags"]["test"]["char"] "\n"
+  txt_usage = "Usage: glep <search_term>[ ...] "\
+               "[" variants["f"]["rgxe"]["word"] "/" variants["f"]["rgxe"]["char"] "] "\
+               "[" variants["f"]["prvw"]["word"] "/" variants["f"]["prvw"]["char"] "] "\
+              "/ " variants["f"]["help"]["word"] "/" variants["f"]["help"]["char"] " "\
+              "/ " variants["f"]["test"]["word"] "/" variants["f"]["test"]["char"] "\n"
   txt_terms = "Terms:\n Any search term may be one of the following prefixed instances:\n"
   # - get max term parts length for term line spacing
-  for(item in variants["terms"]) {
+  for(item in variants["t"]) {
     if(item == "pre") continue
-    parts_l = length(variants["terms"][item]["pre"]) + length(variants["terms"][item]["var"])
+    parts_l = length(variants["t"][item]["pre"]) + length(variants["t"][item]["var"])
     space_c = parts_l > space_c ? parts_l : space_c
   }
   # - add term lines
-  for(item in variants["terms"]) {
+  for(item in variants["t"]) {
     if(item == "pre") continue
-    parts_l = length(variants["terms"][item]["pre"]) + length(variants["terms"][item]["var"])
+    parts_l = length(variants["t"][item]["pre"]) + length(variants["t"][item]["var"])
     spacing = sprintf("%" space_c - parts_l + 2 "s", "")
-    txt_terms = txt_terms "  " variants["terms"][item]["pre"] "<" variants["terms"][item]["var"] ">" spacing variants["terms"][item]["exp"] "\n"
+    txt_terms = txt_terms "  " variants["t"][item]["pre"] "<" variants["t"][item]["var"] ">" spacing variants["t"][item]["exp"] "\n"
   }
   txt_flags = "Flags:\n"
   # - get max flag pair length for flag line spacing
-  for(item in variants["flags"]) {
-    pairs_l = length(variants["flags"][item]["char"]) + 2 + length(variants["flags"][item]["word"])
+  for(item in variants["f"]) {
+    pairs_l = length(variants["f"][item]["char"]) + 2 + length(variants["f"][item]["word"])
     space_c = pairs_l > space_c ? pairs_l : space_c
   }
   # - add flag lines
-  for(item in variants["flags"]) {
-    pairs_l = length(variants["flags"][item]["char"]) + 2 + length(variants["flags"][item]["word"])
+  for(item in variants["f"]) {
+    pairs_l = length(variants["f"][item]["char"]) + 2 + length(variants["f"][item]["word"])
     spacing = sprintf("%" space_c - pairs_l + 2 "s", "")
-    txt_flags = txt_flags "  " variants["flags"][item]["char"] ", " variants["flags"][item]["word"] spacing variants["flags"][item]["desc"]
-    item_c++; if(item_c != length(variants["flags"])) txt_flags = txt_flags "\n"
+    txt_flags = txt_flags "  " variants["f"][item]["char"] ", " variants["f"][item]["word"] spacing variants["f"][item]["desc"]
+    item_c++; if(item_c != length(variants["f"])) txt_flags = txt_flags "\n"
   }
   txt_help = txt_usage txt_terms txt_flags
 }

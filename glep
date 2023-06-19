@@ -1,14 +1,14 @@
 #!/usr/bin/awk -f
 
-# glep v1.13.0
+# glep v1.13.1
 # ©2023 barcek
 # License: MIT
 # @ github.com
 # /barcek/glep
 
 # Assumes the use of a POSIX shell and
-# the presence of AWK (Gawk),
-# plus Git, grep and ls
+# the presence of AWK (Gawk) and Git,
+# plus command, grep and ls
 
 # Run three times per initial command,
 # each run being a single named stage,
@@ -160,7 +160,7 @@ function term_extract(arg, pre) {
 
 # run pipeline to print name and version number then exit
 function vrsn_display() {
-  system("cat glep | head -n 3 | tail -n 1 | awk '{ print $2 \" \" $3}'")
+  system("head -n 3 $(command -v glep) | tail -n 1 | awk '{ print $2 \" \" $3}'")
   exit 0
 }
 

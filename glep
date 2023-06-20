@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v1.13.2
+# glep v1.14.0
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -27,6 +27,7 @@
 BEGIN { # incl. entire list stage
 
   defaults_set() # root_str - root directory
+                 # form_str - format string for output
                  # variants - specially formatted search terms (t) and option flags (f)
                  # txt_help - help text
 
@@ -45,7 +46,7 @@ BEGIN { # incl. entire list stage
         terms_arr[j++] = ARGV[i]
         continue
       }
-      # get value for specially formatted term - root directory, commit object name, author
+      # get value for specially formatted term - root directory, commit object name, author, format string
       if(variants["t"]["name"]["len"] == length(ARGV[i])) {
         term_name = term_extract(ARGV[i], variants["t"]["name"]["pre"])
         if(term_name) {
@@ -62,6 +63,11 @@ BEGIN { # incl. entire list stage
       term_auth = term_extract(ARGV[i], variants["t"]["auth"]["pre"])
       if(term_auth) {
         auth_str = term_auth
+        continue
+      }
+      term_form = term_extract(ARGV[i], variants["t"]["form"]["pre"])
+      if(term_form) {
+        form_str = term_form
         continue
       }
       # get value for or handle option flag - regexp extended, preview, version, help, test
@@ -93,6 +99,7 @@ BEGIN { # incl. entire list stage
                                " -v  root="  root_str\
                                " -v  name="  name_str\
                                " -v  auth="  auth_str\
+                               " -v  form=\""  form_str "\""\
     )
     exit 0
   }
@@ -137,7 +144,7 @@ function grep_perform(dir_dest) {
                                        "git log --branches=*"\
                                               cmd_auth\
                                               " --oneline"\
-                                              " --format=\"%S | %as %an | %h %s\"" cmd_grep\
+                                              " --format=\"" form "\"" cmd_grep\
                                      ") "\
                         "&& cd - > /dev/null "\
                         "&& echo \"$matches\" | glep -v stage=echo"\
@@ -176,6 +183,7 @@ function help_display(msg_err) {
 function defaults_set() {
   # general
   root_str = root ? root : "../"
+  form_str = "%S | %as %an | %h %s"
   # specially formatted search terms (t) and option flags (f)
   variants["pre"] = "="
   # - root directory
@@ -192,6 +200,10 @@ function defaults_set() {
   variants["t"]["auth"]["pre"] = variants["pre"] "@"
   variants["t"]["auth"]["var"] = "author"
   variants["t"]["auth"]["exp"] = "the commit author"
+  # - format
+  variants["t"]["form"]["pre"] = variants["pre"] "%"
+  variants["t"]["form"]["var"] = "format"
+  variants["t"]["form"]["exp"] = "an alternative format string (currently '" form_str "')"
   # - regexp extended
   variants["f"]["rgxe"]["char"] = variants["pre"] "e"
   variants["f"]["rgxe"]["word"] = variants["pre"] "regexp-extended"
@@ -269,8 +281,8 @@ function test_perform() {
   glep_log_base = "glep =preview a b"
   expt_log_base = "cd ../ && ls -a | grep -E '^.git$' > /dev/null && matches=$(git log --branches=* --oneline --format=\"%S | %as %an | %h %s\" | grep --color=always \"a\" | grep --color=always \"b\") && cd - > /dev/null && echo \"$matches\" | glep -v stage=echo -v path=../"
 
-  glep_log_word = "glep =preview a b =@test \"=>./\" =regexp-extended"
-  expt_log_word = "cd ./ && ls -a | grep -E '^.git$' > /dev/null && matches=$(git log --branches=* --author=test --oneline --format=\"%S | %as %an | %h %s\" | grep --color=always -E \"a\" | grep --color=always -E \"b\") && cd - > /dev/null && echo \"$matches\" | glep -v stage=echo -v path=./"
+  glep_log_word = "glep =preview a b =@test \"=>./\" \"=% [test] %s\" =regexp-extended"
+  expt_log_word = "cd ./ && ls -a | grep -E '^.git$' > /dev/null && matches=$(git log --branches=* --author=test --oneline --format=\" [test] %s\" | grep --color=always -E \"a\" | grep --color=always -E \"b\") && cd - > /dev/null && echo \"$matches\" | glep -v stage=echo -v path=./"
 
   glep_log_char = "glep =p a b =e"
   expt_log_char = "cd ../ && ls -a | grep -E '^.git$' > /dev/null && matches=$(git log --branches=* --oneline --format=\"%S | %as %an | %h %s\" | grep --color=always -E \"a\" | grep --color=always -E \"b\") && cd - > /dev/null && echo \"$matches\" | glep -v stage=echo -v path=../"
@@ -278,7 +290,7 @@ function test_perform() {
   glep_show_base = "glep =preview a b =#0a1b2c3"
   expt_show_base = "cd ../ && ls -a | grep -E '^.git$' > /dev/null && git show --color=always 0a1b2c3 2> /dev/null | grep --color=never \"a\" | grep --color=never \"b\""
 
-  glep_show_word = "glep =preview a b =#0a1b2c3 =@test \"=>./\" =regexp-extended"
+  glep_show_word = "glep =preview a b =#0a1b2c3 =@test \"=>./\" \"=% [test] %s\" =regexp-extended"
   expt_show_word = "cd ./ && ls -a | grep -E '^.git$' > /dev/null && git show --color=always 0a1b2c3 2> /dev/null | grep --color=never -E \"a\" | grep --color=never -E \"b\""
 
   glep_show_char = "glep =p a b =#0a1b2c3 =e"

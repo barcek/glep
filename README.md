@@ -16,7 +16,7 @@ The `glep` command takes one or more arguments, the search terms:
 glep <search_term>[ ...]
 ```
 
-The default root directory is the parent - `../` - which is set close to the top of the source file. The terms are sought for the root directory, if a git repo, and for each top-level git repo in the root. The search is performed by default in the output of `git log` using `--branches=*` and `--oneline`, with the matching log entries printed.
+The default root directory is the parent - `../` - which is set close to the top of the source file. The terms are sought for the root directory, if a git repo, and for each top-level git repo in the root. The search is performed by default in the output of `git log` using `--branches=*`, `--oneline` and `--format="%S | %as %an | %h %s"`, with the matching log entries printed preceded by the path to the given git repo.
 
 ### Overriding the root
 
@@ -35,6 +35,16 @@ glep =@<author_name>[ ...]
 ```
 
 This will be passed to `git log` with the `--author` flag to filter the results.
+
+### Setting output format
+
+One term may also be an alternative format string, preceded by the two characters '=%':
+
+```
+glep =%<format_string>[ ...]
+```
+
+This will be passed to `git log` with the `--format` flag to set the structure of each line of output.
 
 ### Displaying a diff
 

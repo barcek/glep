@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v1.14.0
+# glep v1.14.1
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -26,8 +26,7 @@
 
 BEGIN { # incl. entire list stage
 
-  defaults_set() # root_str - root directory
-                 # form_str - format string for output
+  defaults_set() # settings - initially root directory and format string for output
                  # variants - specially formatted search terms (t) and option flags (f)
                  # txt_help - help text
 
@@ -38,45 +37,34 @@ BEGIN { # incl. entire list stage
     # handle non-provision of search terms
     if(ARGC < 2) help_display("No search term provided")
 
-    # get values for any specially formatted terms or flags, consolidating remaining
+    # handle any variants, consolidating remaining
     for(i = 1; i < length(ARGV); i++) {
-      # consolidate then continue if not specially formatted
+      # consolidate early then continue if not variant
       split(ARGV[i], base_arr, variants["pre"])
       if(length(base_arr[2]) != length(ARGV[i]) - length(variants["pre"])) {
         terms_arr[j++] = ARGV[i]
         continue
       }
-      # get value for specially formatted term - root directory, commit object name, author, format string
-      if(variants["t"]["name"]["len"] == length(ARGV[i])) {
-        term_name = term_extract(ARGV[i], variants["t"]["name"]["pre"])
-        if(term_name) {
-          name_str = term_name
-          continue
-        }
+      # handle terms
+      term_found = ""
+      for(term_key in variants["t"]) {
+        term = term_extract(ARGV[i], variants["t"][term_key]["pre"])
+        # continue early
+        if(!term) continue
+        if(variants["t"][term_key]["len"] && variants["t"][term_key]["len"] != length(ARGV[i])) continue
+        # set then break from inner and continue outer
+        settings[term_key] = term
+        term_found = "true"
+        break
       }
-      term_root = term_extract(ARGV[i], variants["t"]["root"]["pre"])
-      if(term_root) {
-        split(term_root, path_arr, "/")
-        root_str = !length(path_arr[length(path_arr)]) ? term_root : term_root "/"
-        continue
-      }
-      term_auth = term_extract(ARGV[i], variants["t"]["auth"]["pre"])
-      if(term_auth) {
-        auth_str = term_auth
-        continue
-      }
-      term_form = term_extract(ARGV[i], variants["t"]["form"]["pre"])
-      if(term_form) {
-        form_str = term_form
-        continue
-      }
-      # get value for or handle option flag - regexp extended, preview, version, help, test
+      if(term_found) continue
+      # handle flags
       if(variants["f"]["rgxe"]["word"] == ARGV[i] || variants["f"]["rgxe"]["char"] == ARGV[i]) {
-        rgxe_str = "true"
+        settings["rgxe"] = "true"
         continue
       }
       if(variants["f"]["prvw"]["word"] == ARGV[i] || variants["f"]["prvw"]["char"] == ARGV[i]) {
-        prvw_str = "true"
+        settings["prvw"] = "true"
         continue
       }
       if(variants["f"]["vrsn"]["word"] == ARGV[i] || variants["f"]["vrsn"]["char"] == ARGV[i]) vrsn_display()
@@ -90,16 +78,19 @@ BEGIN { # incl. entire list stage
     for(i = 1; i < length(terms_arr); i++) {
       terms_str = terms_str ",\"" terms_arr[i] "\""
     }
+    # ensure separator ends root directory
+    split(settings["root"], path_arr, "/")
+    settings["root"] = !length(path_arr[length(path_arr)]) ? settings["root"] : settings["root"] "/"
     # pipe list of dirnames to grep stage
     system(\
-      "ls -F " root_str " | glep -v stage=grep"\
-                               " -v terms=" terms_str\
-                               " -v  rgxe="  rgxe_str\
-                               " -v  prvw="  prvw_str\
-                               " -v  root="  root_str\
-                               " -v  name="  name_str\
-                               " -v  auth="  auth_str\
-                               " -v  form=\""  form_str "\""\
+      "ls -F " settings["root"] " | glep -v stage=grep"\
+                               " -v terms="  terms_str\
+                               " -v  rgxe="   settings["rgxe"]\
+                               " -v  prvw="   settings["prvw"]\
+                               " -v  root="   settings["root"]\
+                               " -v  name="   settings["name"]\
+                               " -v  auth="   settings["auth"]\
+                               " -v  form=\"" settings["form"] "\""\
     )
     exit 0
   }
@@ -113,7 +104,7 @@ BEGIN { # incl. entire list stage
       cmd_grep = cmd_grep " | grep --color=" cmd_grep_col cmd_grep_ext " \"" terms_arr[i] "\""
     }
     # run commands for root directory
-    grep_perform(root_str)
+    grep_perform(settings["root"])
   }
 }
 
@@ -121,7 +112,7 @@ BEGIN { # incl. entire list stage
 
 "grep" == stage && $0 ~ /\/$/ {
   # run commands for next subdirectory
-  dir_next = root_str $0
+  dir_next = settings["root"] $0
   grep_perform(dir_next)
 }
 
@@ -182,14 +173,14 @@ function help_display(msg_err) {
 # initialize default values
 function defaults_set() {
   # general
-  root_str = root ? root : "../"
-  form_str = "%S | %as %an | %h %s"
+  settings["root"] = root ? root : "../"
+  settings["form"] = "%S | %as %an | %h %s"
   # specially formatted search terms (t) and option flags (f)
   variants["pre"] = "="
   # - root directory
   variants["t"]["root"]["pre"] = variants["pre"] ">"
   variants["t"]["root"]["var"] = "path_to_root"
-  variants["t"]["root"]["exp"] = "an alternative root directory (currently '" root_str "')"
+  variants["t"]["root"]["exp"] = "an alternative root directory (currently '" settings["root"] "')"
   # - commit object name
   variants["t"]["name"]["pre"] = variants["pre"] "#"
   variants["t"]["name"]["stem_len"] = 7 # commit object name ([0-9a-f]{7})
@@ -203,7 +194,7 @@ function defaults_set() {
   # - format
   variants["t"]["form"]["pre"] = variants["pre"] "%"
   variants["t"]["form"]["var"] = "format"
-  variants["t"]["form"]["exp"] = "an alternative format string (currently '" form_str "')"
+  variants["t"]["form"]["exp"] = "an alternative format string (currently '" settings["form"] "')"
   # - regexp extended
   variants["f"]["rgxe"]["char"] = variants["pre"] "e"
   variants["f"]["rgxe"]["word"] = variants["pre"] "regexp-extended"

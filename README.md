@@ -18,6 +18,8 @@ glep <search_term>[ ...]
 
 The default root directory is the parent - `../` - which is set close to the top of the source file. The terms are sought for the root directory, if a git repo, and for each top-level git repo in the root. The search is performed by default in the output of `git log` using `--branches=*`, `--oneline` and `--format="%S | %as %an | %h %s"`, with the matching log entries printed preceded by the path to the given git repo.
 
+The git repositories to be included can be listed with the `=list` or `=l` flag (see [Options](#options) below).
+
 ### Overriding the root
 
 One term may be an alternative root directory, preceded by the two characters '=>':
@@ -72,6 +74,7 @@ The following can be passed to `glep` as if a search term:
 
 - `=regexp-extended` / `=e`, to use extended regular expressions in search terms
 - `=preview` / `=p`, to show the command for the root directory then exit
+- `=list` / `=l`, to show the list of git repositories to be included
 - `=version` / `=v`, to show name and version number then exit
-- `=help` / `=h`, to show usage, terms and flags then exit
+- `=help` / `=h`, to show help text, incl. terms and flags, then exit
 - `=test` / `=T`, to perform the self-test then exit

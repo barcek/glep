@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v1.15.0
+# glep v1.15.1
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -37,47 +37,15 @@ BEGIN { # incl. entire list stage
     # handle non-provision of search terms
     if(ARGC < 2) help_display("No search term provided")
 
-    # handle any variants, consolidating remaining
+    # handle variants and accrue remaining
     for(i = 1; i < length(ARGV); i++) {
-      # consolidate early then continue if not variant
-      split(ARGV[i], base_arr, variants["pre"])
-      if(length(base_arr[2]) != length(ARGV[i]) - length(variants["pre"])) {
-        terms_arr[j++] = ARGV[i]
-        continue
-      }
-      # handle terms
-      term_found = ""
-      for(term_key in variants["t"]) {
-        term = term_extract(ARGV[i], variants["t"][term_key]["pre"])
-        # continue early
-        if(!term) continue
-        if(variants["t"][term_key]["len"] && variants["t"][term_key]["len"] != length(ARGV[i])) continue
-        # set then break from inner and continue outer
-        settings[term_key] = term
-        term_found = "true"
-        break
-      }
-      if(term_found) continue
-      # handle flags
-      if(variants["f"]["rgxe"]["word"] == ARGV[i] || variants["f"]["rgxe"]["char"] == ARGV[i]) {
-        settings["rgxe"] = "true"
-        continue
-      }
-      if(variants["f"]["prvw"]["word"] == ARGV[i] || variants["f"]["prvw"]["char"] == ARGV[i]) {
-        settings["prvw"] = "true"
-        continue
-      }
-      if(variants["f"]["list"]["word"] == ARGV[i] || variants["f"]["list"]["char"] == ARGV[i]) {
-        settings["list"] = "true"
-        continue
-      }
-      if(variants["f"]["vrsn"]["word"] == ARGV[i] || variants["f"]["vrsn"]["char"] == ARGV[i]) vrsn_display()
-      if(variants["f"]["help"]["word"] == ARGV[i] || variants["f"]["help"]["char"] == ARGV[i]) help_display()
-      if(variants["f"]["test"]["word"] == ARGV[i] || variants["f"]["test"]["char"] == ARGV[i]) test_perform()
-      # else consolidate
+      # handle if variant
+      if(term_handle(ARGV[i])) continue
+      if(flag_handle(ARGV[i])) continue
+      # else accrue
       terms_arr[j++] = ARGV[i]
     }
-    # comma-separate any terms beyond name
+    # comma-separate any accrued bar name
     terms_str = "\"" terms_arr[0] "\""
     for(i = 1; i < length(terms_arr); i++) {
       terms_str = terms_str ",\"" terms_arr[i] "\""
@@ -132,6 +100,8 @@ BEGIN { # incl. entire list stage
 
 # UTILS
 
+# - task performance
+
 # build and run pipeline performing grep stage tasks
 function grep_perform(dir_dest) {
   # set base command to find git directory
@@ -167,23 +137,40 @@ function list_perform(dir_dest) {
   system(cmd_list)
 }
 
+# - variant handling
+
 # return term unprefixed if special else empty string
 function term_extract(arg, pre) {
   split(arg, arr, pre)
   return length(arr[2]) == length(arg) - length(pre) ? arr[2] : ""
 }
 
-# run pipeline to print name and version number then exit
-function vrsn_display() {
-  system("head -n 3 $(command -v glep) | tail -n 1 | awk '{ print $2 \" \" $3}'")
-  exit 0
+# handle any specially formatted term set and confirm done
+function term_handle(arg) {
+  for(term_key in variants["t"]) {
+    # remove term prefix if present
+    term = term_extract(arg, variants["t"][term_key]["pre"])
+    # handle any early continuation
+    if(!term) continue
+    if(variants["t"][term_key]["len"] && variants["t"][term_key]["len"] != length(arg)) continue
+    # match found - set and confirm
+    settings[term_key] = term
+    return "True"
+  }
 }
 
-# print help text with any error message then exit
-function help_display(msg_err) {
-  if(msg_err) print "Error: " msg_err > "/dev/stderr"
-  print txt_help > "/dev/stderr"
-  exit msg_err ? 1 : 0
+# handle any option application and confirm flag done
+function flag_handle(arg) {
+  for(flag_key in variants["f"]) {
+    if(variants["f"][flag_key]["word"] == ARGV[i] || variants["f"][flag_key]["char"] == ARGV[i]) {
+      # match found - apply and confirm
+      if("rgxe" == flag_key || "prvw" == flag_key || "list" == flag_key) settings[flag_key] = "true"
+      if("vrsn" == flag_key) vrsn_display()
+      if("help" == flag_key) help_display()
+      if("test" == flag_key) test_perform()
+      return "True"
+    }
+  }
 }
 
 # initialize default values
@@ -281,6 +268,21 @@ function defaults_set() {
   # - combine
   txt_help = txt_usage txt_terms txt_flags txt_smry txt_ctxt
 
+}
+
+# - option application, remaining
+
+# run pipeline to print name and version number then exit
+function vrsn_display() {
+  system("head -n 3 $(command -v glep) | tail -n 1 | awk '{ print $2 \" \" $3}'")
+  exit 0
+}
+
+# print help text with any error message then exit
+function help_display(msg_err) {
+  if(msg_err) print "Error: " msg_err > "/dev/stderr"
+  print txt_help > "/dev/stderr"
+  exit msg_err ? 1 : 0
 }
 
 function test_case_run(desc, glep, expt) {

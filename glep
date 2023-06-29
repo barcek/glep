@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v1.15.2
+# glep v1.15.3
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -37,18 +37,18 @@ BEGIN { # incl. entire list stage
     # handle non-provision of search terms
     if(ARGC < 2) help_display("No search term provided")
 
-    # handle variants and accrue remaining
+    # accrue base search terms, handling any variants
     for(i = 1; i < length(ARGV); i++) {
       # handle if variant
       if(term_handle(ARGV[i])) continue
       if(flag_handle(ARGV[i])) continue
-      # else accrue
-      terms_arr[j++] = ARGV[i]
+      # else accrue base
+      base_arr[j++] = ARGV[i]
     }
     # comma-separate any accrued bar name
-    terms_str = "\"" terms_arr[0] "\""
-    for(i = 1; i < length(terms_arr); i++) {
-      terms_str = terms_str ",\"" terms_arr[i] "\""
+    settings["base"] = "\"" base_arr[0] "\""
+    for(i = 1; i < length(base_arr); i++) {
+      settings["base"] = settings["base"] ",\"" base_arr[i] "\""
     }
     # ensure separator ends root directory
     split(settings["root"], path_arr, "/")
@@ -56,7 +56,7 @@ BEGIN { # incl. entire list stage
     # pipe list of dirnames to grep stage
     system(\
       "ls -F " settings["root"] " | glep -v stage=grep"\
-                               " -v terms="  terms_str\
+                               " -v  base="   settings["base"]\
                                " -v  rgxe="   settings["rgxe"]\
                                " -v  prvw="   settings["prvw"]\
                                " -v  list="   settings["list"]\
@@ -69,12 +69,12 @@ BEGIN { # incl. entire list stage
   }
 
   if("grep" == stage) {
-    # build grep string for terms passed
+    # build grep string for base terms passed
     cmd_grep_col = !name ? "always" : "never"
     cmd_grep_ext = !rgxe ? ""       : " -E"
-    split(terms, terms_arr, ",")
-    for(i = 1; i <= length(terms_arr); i++) {
-      cmd_grep = cmd_grep " | grep --color=" cmd_grep_col cmd_grep_ext " \"" terms_arr[i] "\""
+    split(base, base_arr, ",")
+    for(i = 1; i <= length(base_arr); i++) {
+      cmd_grep = cmd_grep " | grep --color=" cmd_grep_col cmd_grep_ext " \"" base_arr[i] "\""
     }
     # run commands for root directory
     !list\

@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v1.15.1
+# glep v1.15.2
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -223,6 +223,12 @@ function defaults_set() {
   variants["f"]["test"]["word"] = variants["pre"] "test"
   variants["f"]["test"]["desc"] = "perform the self-test then exit"
   # help text
+  width_gen = 74
+  # - add title line
+  core_info = core_info_get()
+  for(i = 0; i < ((width_gen - length(core_info) - 2) / 2 - 1); i++) fill = fill "-"
+  txt_title =  fill " " core_info " " fill "-\n"
+  # - add usage lines
   txt_usage = "Usage: glep <search_term>[ ...] "\
                 "["  variants["f"]["rgxe"]["word"] "/" variants["f"]["rgxe"]["char"] "] "\
                 "["  variants["f"]["prvw"]["word"] "/" variants["f"]["prvw"]["char"] "] "\
@@ -231,27 +237,27 @@ function defaults_set() {
                 "/ " variants["f"]["vrsn"]["word"] "/" variants["f"]["vrsn"]["char"] " "\
                 "/ " variants["f"]["help"]["word"] "/" variants["f"]["help"]["char"] " "\
                 "/ " variants["f"]["test"]["word"] "/" variants["f"]["test"]["char"] "\n"
+  # - add term lines
   txt_terms = "Terms:\n Any search term may be one of the following prefixed instances:\n"
-  # - get max term parts length for term line spacing
+  #   get max term parts length for term line spacing
   for(item in variants["t"]) {
     if(item == "pre") continue
     parts_l = length(variants["t"][item]["pre"]) + length(variants["t"][item]["var"])
     space_c = parts_l > space_c ? parts_l : space_c
   }
-  # - add term lines
   for(item in variants["t"]) {
     if(item == "pre") continue
     parts_l = length(variants["t"][item]["pre"]) + length(variants["t"][item]["var"])
     spacing = sprintf("%" space_c - parts_l + 2 "s", "")
     txt_terms = txt_terms "  " variants["t"][item]["pre"] "<" variants["t"][item]["var"] ">" spacing variants["t"][item]["exp"] "\n"
   }
+  # - add flag lines
   txt_flags = "Flags:\n"
-  # - get max flag pair length for flag line spacing
+  #   get max flag pair length for flag line spacing
   for(item in variants["f"]) {
     pairs_l = length(variants["f"][item]["char"]) + 2 + length(variants["f"][item]["word"])
     space_c = pairs_l > space_c ? pairs_l : space_c
   }
-  # - add flag lines
   for(item in variants["f"]) {
     pairs_l = length(variants["f"][item]["char"]) + 2 + length(variants["f"][item]["word"])
     spacing = sprintf("%" space_c - pairs_l + 2 "s", "")
@@ -262,19 +268,25 @@ function defaults_set() {
   "head -n 25 $(command -v glep) | tail -n 1 | tr -d '\n#' | sed 's/ or / and with a /' | sed 's/for //'" | getline txt_smry_body_2
   txt_smry = "Summary:\n Search terms are" txt_smry_body_1 "\n" txt_smry_body_2 "\n"
   # - add context lines
-  "head -n 12 $(command -v glep) | tail -n 4 | tr -d '\n#' | fold -sw 75 | tr '\n' '#'" | getline txt_ctxt_body
+  "head -n 12 $(command -v glep) | tail -n 4 | tr -d '\n#' | fold -sw " width_gen " | tr '\n' '#'" | getline txt_ctxt_body
   gsub(/#/, "\n ", txt_ctxt_body)
   txt_ctxt = "Context:\n" txt_ctxt_body
   # - combine
-  txt_help = txt_usage txt_terms txt_flags txt_smry txt_ctxt
+  txt_help = txt_title txt_usage txt_terms txt_flags txt_smry txt_ctxt
 
 }
 
 # - option application, remaining
 
-# run pipeline to print name and version number then exit
+# return name and version number from pipeline run
+function core_info_get() {
+  "head -n 3 $(command -v glep) | tail -n 1 | awk '{ print $2 \" \" $3}'" | getline core_info
+  return core_info
+}
+
+# print name and version number then exit
 function vrsn_display() {
-  system("head -n 3 $(command -v glep) | tail -n 1 | awk '{ print $2 \" \" $3}'")
+  print core_info_get()
   exit 0
 }
 

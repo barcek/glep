@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v1.14.1
+# glep v1.14.2
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -8,8 +8,8 @@
 
 # Assumes the use of a POSIX shell and
 # the presence of AWK (Gawk) and Git,
-# plus command, fold, grep, head, ls,
-# sed, tail and tr
+# plus fold, grep, head, ls, sed,
+# tail and tr
 
 # Run three times per initial command,
 # each run being a single named stage,
@@ -210,7 +210,7 @@ function defaults_set() {
   # - help
   variants["f"]["help"]["char"] = variants["pre"] "h"
   variants["f"]["help"]["word"] = variants["pre"] "help"
-  variants["f"]["help"]["desc"] = "show usage, terms and flags then exit"
+  variants["f"]["help"]["desc"] = "show help text, incl. terms and flags, then exit"
   # - test
   variants["f"]["test"]["char"] = variants["pre"] "T"
   variants["f"]["test"]["word"] = variants["pre"] "test"

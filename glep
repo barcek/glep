@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v1.14.2
+# glep v1.15.0
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -67,6 +67,10 @@ BEGIN { # incl. entire list stage
         settings["prvw"] = "true"
         continue
       }
+      if(variants["f"]["list"]["word"] == ARGV[i] || variants["f"]["list"]["char"] == ARGV[i]) {
+        settings["list"] = "true"
+        continue
+      }
       if(variants["f"]["vrsn"]["word"] == ARGV[i] || variants["f"]["vrsn"]["char"] == ARGV[i]) vrsn_display()
       if(variants["f"]["help"]["word"] == ARGV[i] || variants["f"]["help"]["char"] == ARGV[i]) help_display()
       if(variants["f"]["test"]["word"] == ARGV[i] || variants["f"]["test"]["char"] == ARGV[i]) test_perform()
@@ -87,6 +91,7 @@ BEGIN { # incl. entire list stage
                                " -v terms="  terms_str\
                                " -v  rgxe="   settings["rgxe"]\
                                " -v  prvw="   settings["prvw"]\
+                               " -v  list="   settings["list"]\
                                " -v  root="   settings["root"]\
                                " -v  name="   settings["name"]\
                                " -v  auth="   settings["auth"]\
@@ -104,7 +109,9 @@ BEGIN { # incl. entire list stage
       cmd_grep = cmd_grep " | grep --color=" cmd_grep_col cmd_grep_ext " \"" terms_arr[i] "\""
     }
     # run commands for root directory
-    grep_perform(settings["root"])
+    !list\
+      ? grep_perform(settings["root"])\
+      : list_perform(settings["root"])
   }
 }
 
@@ -113,7 +120,9 @@ BEGIN { # incl. entire list stage
 "grep" == stage && $0 ~ /\/$/ {
   # run commands for next subdirectory
   dir_next = settings["root"] $0
-  grep_perform(dir_next)
+  !list\
+    ? grep_perform(dir_next)\
+    : list_perform(dir_next)
 }
 
 "echo" == stage {
@@ -149,6 +158,13 @@ function grep_perform(dir_dest) {
     if(prvw) { print cmd_full; exit 0 }
     system(cmd_full)
   }
+}
+
+# run pipeline to print list of git repositories then exit
+function list_perform(dir_dest) {
+  cmd_list = "cd " dir_dest " && ls -a | grep -E '^.git$' > /dev/null && echo " dir_dest
+  if(prvw) { print cmd_list; exit 0 }
+  system(cmd_list)
 }
 
 # return term unprefixed if special else empty string
@@ -199,6 +215,10 @@ function defaults_set() {
   variants["f"]["rgxe"]["char"] = variants["pre"] "e"
   variants["f"]["rgxe"]["word"] = variants["pre"] "regexp-extended"
   variants["f"]["rgxe"]["desc"] = "use extended regular expressions in search terms"
+  # - list
+  variants["f"]["list"]["char"] = variants["pre"] "l"
+  variants["f"]["list"]["word"] = variants["pre"] "list"
+  variants["f"]["list"]["desc"] = "show the list of git repositories to be included"
   # - preview
   variants["f"]["prvw"]["char"] = variants["pre"] "p"
   variants["f"]["prvw"]["word"] = variants["pre"] "preview"
@@ -218,7 +238,8 @@ function defaults_set() {
   # help text
   txt_usage = "Usage: glep <search_term>[ ...] "\
                 "["  variants["f"]["rgxe"]["word"] "/" variants["f"]["rgxe"]["char"] "] "\
-                "["  variants["f"]["prvw"]["word"] "/" variants["f"]["prvw"]["char"] "]\n"\
+                "["  variants["f"]["prvw"]["word"] "/" variants["f"]["prvw"]["char"] "] "\
+                "[ " variants["f"]["list"]["word"] "/" variants["f"]["list"]["char"] "]\n"\
               "            "\
                 "/ " variants["f"]["vrsn"]["word"] "/" variants["f"]["vrsn"]["char"] " "\
                 "/ " variants["f"]["help"]["word"] "/" variants["f"]["help"]["char"] " "\
@@ -287,6 +308,12 @@ function test_perform() {
   glep_show_char = "glep =p a b =#0a1b2c3 =e"
   expt_show_char = "cd ../ && ls -a | grep -E '^.git$' > /dev/null && git show --color=always 0a1b2c3 2> /dev/null | grep --color=never -E \"a\" | grep --color=never -E \"b\""
 
+  glep_list_word = "glep =preview =list"
+  expt_list_word = "cd ../ && ls -a | grep -E '^.git$' > /dev/null && echo ../"
+
+  glep_list_char = "glep =p =l"
+  expt_list_char = "cd ../ && ls -a | grep -E '^.git$' > /dev/null && echo ../"
+
   glep_str_none = "glep 2>&1 | head -n 1"
   expt_str_none = "Error: No search term provided"
 
@@ -296,6 +323,8 @@ function test_perform() {
   test_case_run("show/base", glep_show_base, expt_show_base)
   test_case_run("show/word", glep_show_word, expt_show_word)
   test_case_run("show/char", glep_show_char, expt_show_char)
+  test_case_run("list/word", glep_list_word, expt_list_word)
+  test_case_run("list/char", glep_list_char, expt_list_char)
   test_case_run("str/none",  glep_str_none,  expt_str_none)
 
   exit 0

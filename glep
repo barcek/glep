@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v1.15.3
+# glep v1.15.4
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -226,8 +226,12 @@ function defaults_set() {
   width_gen = 74
   # - add title line
   core_info = core_info_get()
-  for(i = 0; i < ((width_gen - length(core_info) - 2) / 2 - 1); i++) fill = fill "-"
-  txt_title =  fill " " core_info " " fill "-\n"
+  diff = width_gen - length(core_info) - 2
+  indt = diff / 2 - 0.5
+  rmdr = diff % 2
+  for(i = 0; i < indt; i++)        fill_l = fill_l "-"
+  for(i = 0; i < indt + rmdr; i++) fill_r = fill_r "-"
+  txt_title =  fill_l " " core_info " " fill_r "\n"
   # - add usage lines
   txt_usage = "Usage: glep <search_term>[ ...] "\
                 "["  variants["f"]["rgxe"]["word"] "/" variants["f"]["rgxe"]["char"] "] "\

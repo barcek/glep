@@ -2,7 +2,7 @@
 
 Grep across multiple git repositories.
 
-Returns matching commit log entries or diff lines, or a specific full diff, for all git repositories in the parent directory.
+Returns matching commit log entries or diff lines, or a specific full diff, for all git repositories in the parent directory. Includes a preview option for the key commands generated and a self-test.
 
 ## Why?
 
@@ -63,6 +63,13 @@ If this is the sole search term provided, the entire diff for that commit is sho
 The script invokes itself and is assumed in doing so to have been made both executable, via a command like `chmod +x glep`, and available from any directory, e.g. by placing it in the '/bin' or '/usr/bin' directory.
 
 The hashbang at the top of the file assumes the presence of AWK in '/usr/bin', the source code that this is in fact Gawk and that several other utils and Git itself are installed. A list can be found close to the top of the file, as well as in the help text.
+
+### Defaults
+
+The following sets of core default values are defined in the `defaults_set` function close to the base of the source file:
+
+- `settings`, for the root directory and format string for output, and at runtime user-provided values
+- `variants`, for the specially formatted search terms (`t`) and option flags (`f`)
 
 ### Making changes
 

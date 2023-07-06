@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v1.15.5
+# glep v1.15.6
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -11,23 +11,28 @@
 # plus fold, grep, head, ls, sed,
 # tail and tr
 
-# Run three times per initial command,
-# each run being a single named stage,
+# Runs by default three times for each
+# initial command, with each run being
+# a single named stage using variously
+# the BEGIN block and intrinsic LOOPS,
 # all but no. 3 then running the next:
-# 1. 'list' (BEGIN; runs no. 2)
+# 1. 'list' (BEGIN only; runs no. 2)
 # 2. 'grep' (BEGIN & LOOPS; runs no. 3)
-# 3. 'echo' (LOOPS)
+# 3. 'echo' (primarily LOOPS)
 #
 # Arguments to no. 1 are search terms,
 # used by default to filter 'git log',
-# or flags, each indicating an option;
-# any may be a prefixed root or author
+# or flags, each indicating an option
+#
+# Any term may be prefixed to provide
+# the commit author or an alternative
+# root directory or log format string,
 # or commit object name for 'git show'
 
 BEGIN { # incl. entire list stage
 
-  defaults_set() # settings - initially root directory and format string for output
-                 # variants - specially formatted search terms (t) and option flags (f)
+  defaults_set() # settings - initially root directory and format string for log output
+                 # variants - prefixed search terms (t) and option flags (f)
                  # txt_help - help text
 
   stage = stage ? stage : "list"
@@ -145,7 +150,7 @@ function term_extract(arg, pre) {
   return length(arr[2]) == length(arg) - length(pre) ? arr[2] : ""
 }
 
-# handle any specially formatted term set and confirm done
+# handle any prefixed term set and confirm done
 function term_handle(arg) {
   for(term_key in variants["t"]) {
     # remove term prefix if present
@@ -178,7 +183,7 @@ function defaults_set() {
   # general
   settings["root"] = root ? root : "../"
   settings["form"] = "%S | %as %an | %h %s"
-  # specially formatted search terms (t) and option flags (f)
+  # prefixed search terms (t) and option flags (f)
   variants["pre"] = "="
   # - root directory
   variants["t"]["root"]["pre"] = variants["pre"] ">"
@@ -190,11 +195,11 @@ function defaults_set() {
   variants["t"]["name"]["len"] = length(variants["t"]["name"]["pre"]) + variants["t"]["name"]["stem_len"]
   variants["t"]["name"]["var"] = "commit_object_name"
   variants["t"]["name"]["exp"] = "a " variants["t"]["name"]["stem_len"] "-character hexadecimal commit object name"
-  # - author
+  # - commit author
   variants["t"]["auth"]["pre"] = variants["pre"] "@"
   variants["t"]["auth"]["var"] = "author"
   variants["t"]["auth"]["exp"] = "the commit author"
-  # - format
+  # - format string
   variants["t"]["form"]["pre"] = variants["pre"] "%"
   variants["t"]["form"]["var"] = "format"
   variants["t"]["form"]["exp"] = "an alternative format string (currently '" settings["form"] "')"
@@ -293,8 +298,8 @@ function txt_help_get() {
     txt_flags = txt_flags "  " variants["f"][item]["char"] ", " variants["f"][item]["word"] spacing variants["f"][item]["desc"] "\n"
   }
   # - add summary lines
-  "head -n 22 $(command -v glep) | tail -n 1 | tr -d '\n#'" | getline txt_smry_body_1
-  "head -n 25 $(command -v glep) | tail -n 1 | tr -d '\n#' | sed 's/ or / and with a /' | sed 's/for //'" | getline txt_smry_body_2
+  "head -n 24 $(command -v glep) | tail -n 1 | tr -d '\n#'" | getline txt_smry_body_1
+  "head -n 30 $(command -v glep) | tail -n 1 | tr -d '\n#' | sed 's/ or / and with a /' | sed 's/for //'" | getline txt_smry_body_2
   txt_smry = "Summary:\n Search terms are" txt_smry_body_1 "\n" txt_smry_body_2 "\n"
   # - add context lines
   "head -n 12 $(command -v glep) | tail -n 4 | tr -d '\n#' | fold -sw " width_gen " | tr '\n' '#'" | getline txt_ctxt_body

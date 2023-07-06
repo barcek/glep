@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v1.15.4
+# glep v1.15.5
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -223,6 +223,31 @@ function defaults_set() {
   variants["f"]["test"]["word"] = variants["pre"] "test"
   variants["f"]["test"]["desc"] = "perform the self-test then exit"
   # help text
+  txt_help = txt_help_get()
+}
+
+# - option application, remaining
+
+# return name and version number from pipeline run
+function core_info_get() {
+  "head -n 3 $(command -v glep) | tail -n 1 | awk '{ print $2 \" \" $3}'" | getline core_info
+  return core_info
+}
+
+# print name and version number then exit
+function vrsn_display() {
+  print core_info_get()
+  exit 0
+}
+
+# print help text with any error message then exit
+function help_display(msg_err) {
+  if(msg_err) print "Error: " msg_err > "/dev/stderr"
+  print txt_help > "/dev/stderr"
+  exit msg_err ? 1 : 0
+}
+
+function txt_help_get() {
   width_gen = 74
   # - add title line
   core_info = core_info_get()
@@ -275,30 +300,8 @@ function defaults_set() {
   "head -n 12 $(command -v glep) | tail -n 4 | tr -d '\n#' | fold -sw " width_gen " | tr '\n' '#'" | getline txt_ctxt_body
   gsub(/#/, "\n ", txt_ctxt_body)
   txt_ctxt = "Context:\n" txt_ctxt_body
-  # - combine
-  txt_help = txt_title txt_usage txt_terms txt_flags txt_smry txt_ctxt
-
-}
-
-# - option application, remaining
-
-# return name and version number from pipeline run
-function core_info_get() {
-  "head -n 3 $(command -v glep) | tail -n 1 | awk '{ print $2 \" \" $3}'" | getline core_info
-  return core_info
-}
-
-# print name and version number then exit
-function vrsn_display() {
-  print core_info_get()
-  exit 0
-}
-
-# print help text with any error message then exit
-function help_display(msg_err) {
-  if(msg_err) print "Error: " msg_err > "/dev/stderr"
-  print txt_help > "/dev/stderr"
-  exit msg_err ? 1 : 0
+  # - return combined
+  return txt_title txt_usage txt_terms txt_flags txt_smry txt_ctxt
 }
 
 function test_case_run(desc, glep, expt) {

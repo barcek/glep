@@ -2,7 +2,7 @@
 
 Grep across multiple git repositories.
 
-Returns matching commit log entries or diff lines, or a specific full diff, for all git repositories in the parent directory. Includes a preview option for the key commands generated and a self-test.
+Returns matching commit log entries or diff lines, or a specific full diff, for all git repositories in the parent directory. Includes a preview option for the key shell commands generated and a self-test.
 
 ## Why?
 
@@ -22,21 +22,11 @@ The git repositories to be included can be listed with the `=list` or `=l` flag 
 
 ### Overriding the root
 
-One term may be an alternative root directory, preceded by the two characters '=>':
+One term may be an alternative root directory, preceded by the two characters '=/':
 
 ```
-glep =><path_to_root>[ ...]
+glep =/<path_to_root>[ ...]
 ```
-
-### Filtering by author
-
-One term may also be all or part of the commit author name, preceded by the two characters '=@':
-
-```
-glep =@<author_name>[ ...]
-```
-
-This will be passed to `git log` with the `--author` flag to filter the results.
 
 ### Setting output format
 
@@ -48,6 +38,16 @@ glep =%<format_string>[ ...]
 
 This will be passed to `git log` with the `--format` flag to set the structure of each line of output.
 
+### Filtering by author
+
+One term may also be all or part of the commit author name, preceded by the two characters '=@':
+
+```
+glep =@<author_name>[ ...]
+```
+
+This will be passed to `git log` with the `--author` flag to filter the results.
+
 ### Displaying a diff
 
 One term may instead be a seven-character hexadecimal commit object name, preceded by the two characters '=#':
@@ -57,6 +57,13 @@ glep =#<object_name>[ ...]
 ```
 
 If this is the sole search term provided, the entire diff for that commit is shown, per `git show`. With additional search terms, only the matching lines of the diff are printed.
+
+### Prefixes
+
+- `=/` - an alternative root directory ('../' by default); secondary prefix `=>` also available
+- `=%` - an alternative format string ('%S | %as %an | %h %s' by default)
+- `=@` - the commit author
+- `=#` - a seven-character hexadecimal commit object name
 
 ## Source
 

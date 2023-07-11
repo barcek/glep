@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v1.15.6
+# glep v1.16.0
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -153,8 +153,9 @@ function term_extract(arg, pre) {
 # handle any prefixed term set and confirm done
 function term_handle(arg) {
   for(term_key in variants["t"]) {
-    # remove term prefix if present
+    # remove term prefix if present, retrying for any alternative
     term = term_extract(arg, variants["t"][term_key]["pre"])
+    if(!term) term = term_extract(arg, variants["t"][term_key]["pre_alt"])
     # handle any early continuation
     if(!term) continue
     if(variants["t"][term_key]["len"] && variants["t"][term_key]["len"] != length(arg)) continue
@@ -186,23 +187,24 @@ function defaults_set() {
   # prefixed search terms (t) and option flags (f)
   variants["pre"] = "="
   # - root directory
-  variants["t"]["root"]["pre"] = variants["pre"] ">"
+  variants["t"]["root"]["pre"] = variants["pre"] "/"
+  variants["t"]["root"]["pre_alt"] = variants["pre"] ">"
   variants["t"]["root"]["var"] = "path_to_root"
   variants["t"]["root"]["exp"] = "an alternative root directory (currently '" settings["root"] "')"
+  # - commit author
+  variants["t"]["auth"]["pre"] = variants["pre"] "@"
+  variants["t"]["auth"]["var"] = "author_name"
+  variants["t"]["auth"]["exp"] = "the commit author"
+  # - format string
+  variants["t"]["form"]["pre"] = variants["pre"] "%"
+  variants["t"]["form"]["var"] = "format_string"
+  variants["t"]["form"]["exp"] = "an alternative format string (currently '" settings["form"] "')"
   # - commit object name
   variants["t"]["name"]["pre"] = variants["pre"] "#"
   variants["t"]["name"]["stem_len"] = 7 # commit object name ([0-9a-f]{7})
   variants["t"]["name"]["len"] = length(variants["t"]["name"]["pre"]) + variants["t"]["name"]["stem_len"]
-  variants["t"]["name"]["var"] = "commit_object_name"
+  variants["t"]["name"]["var"] = "object_name"
   variants["t"]["name"]["exp"] = "a " variants["t"]["name"]["stem_len"] "-character hexadecimal commit object name"
-  # - commit author
-  variants["t"]["auth"]["pre"] = variants["pre"] "@"
-  variants["t"]["auth"]["var"] = "author"
-  variants["t"]["auth"]["exp"] = "the commit author"
-  # - format string
-  variants["t"]["form"]["pre"] = variants["pre"] "%"
-  variants["t"]["form"]["var"] = "format"
-  variants["t"]["form"]["exp"] = "an alternative format string (currently '" settings["form"] "')"
   # - regexp extended
   variants["f"]["rgxe"]["char"] = variants["pre"] "e"
   variants["f"]["rgxe"]["word"] = variants["pre"] "regexp-extended"
@@ -319,8 +321,11 @@ function test_perform() {
   glep_log_base = "glep =preview a b"
   expt_log_base = "cd ../ && ls -a | grep -E '^.git$' > /dev/null && matches=$(git log --branches=* --oneline --format=\"%S | %as %an | %h %s\" | grep --color=always \"a\" | grep --color=always \"b\") && cd - > /dev/null && echo \"$matches\" | glep -v stage=echo -v path=../"
 
-  glep_log_word = "glep =preview a b =@test \"=>./\" \"=% [test] %s\" =regexp-extended"
-  expt_log_word = "cd ./ && ls -a | grep -E '^.git$' > /dev/null && matches=$(git log --branches=* --author=test --oneline --format=\" [test] %s\" | grep --color=always -E \"a\" | grep --color=always -E \"b\") && cd - > /dev/null && echo \"$matches\" | glep -v stage=echo -v path=./"
+  glep_log_word_std = "glep =preview a b =@test =/./ \"=% [test] %s\" =regexp-extended"
+  expt_log_word_std = "cd ./ && ls -a | grep -E '^.git$' > /dev/null && matches=$(git log --branches=* --author=test --oneline --format=\" [test] %s\" | grep --color=always -E \"a\" | grep --color=always -E \"b\") && cd - > /dev/null && echo \"$matches\" | glep -v stage=echo -v path=./"
+
+  glep_log_word_alt = "glep =preview a b =@test \"=>./\" \"=% [test] %s\" =regexp-extended"
+  expt_log_word_alt = "cd ./ && ls -a | grep -E '^.git$' > /dev/null && matches=$(git log --branches=* --author=test --oneline --format=\" [test] %s\" | grep --color=always -E \"a\" | grep --color=always -E \"b\") && cd - > /dev/null && echo \"$matches\" | glep -v stage=echo -v path=./"
 
   glep_log_char = "glep =p a b =e"
   expt_log_char = "cd ../ && ls -a | grep -E '^.git$' > /dev/null && matches=$(git log --branches=* --oneline --format=\"%S | %as %an | %h %s\" | grep --color=always -E \"a\" | grep --color=always -E \"b\") && cd - > /dev/null && echo \"$matches\" | glep -v stage=echo -v path=../"
@@ -328,8 +333,11 @@ function test_perform() {
   glep_show_base = "glep =preview a b =#0a1b2c3"
   expt_show_base = "cd ../ && ls -a | grep -E '^.git$' > /dev/null && git show --color=always 0a1b2c3 2> /dev/null | grep --color=never \"a\" | grep --color=never \"b\""
 
-  glep_show_word = "glep =preview a b =#0a1b2c3 =@test \"=>./\" \"=% [test] %s\" =regexp-extended"
-  expt_show_word = "cd ./ && ls -a | grep -E '^.git$' > /dev/null && git show --color=always 0a1b2c3 2> /dev/null | grep --color=never -E \"a\" | grep --color=never -E \"b\""
+  glep_show_word_std = "glep =preview a b =#0a1b2c3 =@test =/./ \"=% [test] %s\" =regexp-extended"
+  expt_show_word_std = "cd ./ && ls -a | grep -E '^.git$' > /dev/null && git show --color=always 0a1b2c3 2> /dev/null | grep --color=never -E \"a\" | grep --color=never -E \"b\""
+
+  glep_show_word_alt = "glep =preview a b =#0a1b2c3 =@test \"=>./\" \"=% [test] %s\" =regexp-extended"
+  expt_show_word_alt = "cd ./ && ls -a | grep -E '^.git$' > /dev/null && git show --color=always 0a1b2c3 2> /dev/null | grep --color=never -E \"a\" | grep --color=never -E \"b\""
 
   glep_show_char = "glep =p a b =#0a1b2c3 =e"
   expt_show_char = "cd ../ && ls -a | grep -E '^.git$' > /dev/null && git show --color=always 0a1b2c3 2> /dev/null | grep --color=never -E \"a\" | grep --color=never -E \"b\""
@@ -343,15 +351,17 @@ function test_perform() {
   glep_str_none = "glep 2>&1 | head -n 1"
   expt_str_none = "Error: No search term provided"
 
-  test_case_run("log/base",  glep_log_base,  expt_log_base)
-  test_case_run("log/word",  glep_log_word,  expt_log_word)
-  test_case_run("log/char",  glep_log_char,  expt_log_char)
-  test_case_run("show/base", glep_show_base, expt_show_base)
-  test_case_run("show/word", glep_show_word, expt_show_word)
-  test_case_run("show/char", glep_show_char, expt_show_char)
-  test_case_run("list/word", glep_list_word, expt_list_word)
-  test_case_run("list/char", glep_list_char, expt_list_char)
-  test_case_run("str/none",  glep_str_none,  expt_str_none)
+  test_case_run("log/base",      glep_log_base,      expt_log_base)
+  test_case_run("log/word/std",  glep_log_word_std,  expt_log_word_std)
+  test_case_run("log/word/alt",  glep_log_word_alt,  expt_log_word_alt)
+  test_case_run("log/char",      glep_log_char,      expt_log_char)
+  test_case_run("show/base",     glep_show_base,     expt_show_base)
+  test_case_run("show/word/std", glep_show_word_std, expt_show_word_std)
+  test_case_run("show/word/alt", glep_show_word_alt, expt_show_word_alt)
+  test_case_run("show/char",     glep_show_char,     expt_show_char)
+  test_case_run("list/word",     glep_list_word,     expt_list_word)
+  test_case_run("list/char",     glep_list_char,     expt_list_char)
+  test_case_run("str/none",      glep_str_none,      expt_str_none)
 
   exit 0
 }

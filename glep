@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v1.16.1
+# glep v1.16.2
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -212,7 +212,7 @@ function defaults_set() {
   # - list
   variants["f"]["list"]["char"] = variants["pre"] "l"
   variants["f"]["list"]["word"] = variants["pre"] "list"
-  variants["f"]["list"]["desc"] = "show the list of git repositories to be included"
+  variants["f"]["list"]["desc"] = "list the git repositories included, not searching"
   # - preview
   variants["f"]["prvw"]["char"] = variants["pre"] "p"
   variants["f"]["prvw"]["word"] = variants["pre"] "preview"

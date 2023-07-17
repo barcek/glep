@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v1.16.2
+# glep v1.16.3
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -349,6 +349,15 @@ function test_perform() {
   glep_list_char = "glep =p =l"
   expt_list_char = "cd ../ && ls -a | grep -E '^.git$' > /dev/null && echo ../"
 
+  glep_str_v_full = "glep =v | grep -E \"glep v([0-9]+\\.){2}[0-9]+\" | wc -l"
+  expt_str_v_full = "1"
+
+  glep_str_h_form = "glep =h | grep -E \"(- glep v|Usage:|Terms:|Flags:|Summary:|Context:)\" | wc -l"
+  expt_str_h_form = "6"
+
+  glep_str_h_ln_c = "glep =h | wc -l"
+  expt_str_h_ln_c = "22"
+
   glep_str_none = "glep 2>&1 | head -n 1"
   expt_str_none = "Error: No search term provided"
 
@@ -363,6 +372,9 @@ function test_perform() {
   test_case_run("list/word",     glep_list_word,     expt_list_word)
   test_case_run("list/char",     glep_list_char,     expt_list_char)
   test_case_run("str/none",      glep_str_none,      expt_str_none)
+  test_case_run("str/v/full",    glep_str_v_full,    expt_str_v_full)
+  test_case_run("str/v/full",    glep_str_v_full,    expt_str_v_full)
+  test_case_run("str/h/ln_c",    glep_str_h_ln_c,    expt_str_h_ln_c)
 
   exit 0
 }

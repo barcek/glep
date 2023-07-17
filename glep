@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-# glep v1.16.0
+# glep v1.16.1
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -249,8 +249,9 @@ function vrsn_display() {
 
 # print help text with any error message then exit
 function help_display(msg_err) {
-  if(msg_err) print "Error: " msg_err > "/dev/stderr"
-  print txt_help > "/dev/stderr"
+  insert = msg_err ? "Error: " msg_err "\n" : ""
+  stream = msg_err ? "stderr" : "stdout"
+  print insert txt_help > "/dev/" stream
   exit msg_err ? 1 : 0
 }
 

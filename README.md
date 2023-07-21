@@ -92,3 +92,13 @@ The following can be passed to `glep` as if a search term:
 - `=version` / `=v`, to show name and version number then exit
 - `=help` / `=h`, to show help text, incl. terms and flags, then exit
 - `=test` / `=T`, to perform the self-test then exit
+
+## Development plan
+
+The following are the expected next steps in the development of the code base. The general medium-term aim is a more configurable, portable and robust implementation. Pull requests are welcome for these and other potential improvements.
+
+- add a +/- number and pre-/post-date term for commit range
+- revise help text generation for listing order and width
+- add automatic dependency checking with notification
+- extend argument handling for short flag clustering
+- allow for an alternative executable name

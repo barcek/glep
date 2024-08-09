@@ -16,7 +16,9 @@ The `glep` command takes one or more arguments, the search terms:
 glep <search_term>[ ...]
 ```
 
-The default root directory is the parent - `../` - which is set close to the top of the source file. The terms are sought for the root directory, if a git repo, and for each top-level git repo in the root. The search is performed by default in the output of `git log` using `--branches=*`, `--oneline` and `--format="%S | %as %an | %h %s"`, with the matching log entries printed preceded by the path to the given git repo.
+The default root directory is the parent - `../` - which is set close to the top of the source file. The terms are sought for the root directory, if a git repo, and for each top-level git repo in the root.
+
+The search is performed by default in the output of `git log` using `--branches=*`, `--oneline` and `--format="%S | %as %an | %h %s"`, with the matching log entries printed preceded by the path to the given git repo.
 
 The git repositories to be included can be listed with the `=list` or `=l` flag (see [Options](#options) below).
 
@@ -69,7 +71,7 @@ If this is the sole search term provided, the entire diff for that commit is sho
 
 The script invokes itself and is assumed in doing so to have been made both executable, via a command like `chmod +x glep`, and available from any directory, e.g. by placing it in the '/bin' or '/usr/bin' directory.
 
-The hashbang at the top of the file assumes the presence of AWK in '/usr/bin', the source code that this is in fact Gawk and that several other utils and Git itself are installed and can be invoked directly, e.g. Git with `git`. A list can be found close to the top of the file, as well as in the help text.
+The hashbang at the top of the file assumes the presence of Gawk in '/usr/bin', the source code that Gawk, several other utils and Git itself are installed and can be invoked directly, e.g. Git with `git`. A list can be found close to the top of the file, as well as in the help text.
 
 ### Defaults
 
@@ -92,6 +94,8 @@ The following can be passed to `glep` as if a search term:
 - `=version` / `=v`, to show name and version number then exit
 - `=help` / `=h`, to show help text, incl. terms and flags, then exit
 - `=test` / `=T`, to perform the self-test then exit
+
+Note for all flags the use of the leading character `=`. Flags using the more common `-`/`--` are interpreted as options for Gawk itself.
 
 ## Development plan
 

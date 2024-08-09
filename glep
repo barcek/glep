@@ -1,13 +1,13 @@
-#!/usr/bin/awk -f
+#!/usr/bin/gawk -f
 
-# glep v1.16.3
+# glep v1.16.4
 # ©2023 barcek
 # License: MIT
 # @ github.com
 # /barcek/glep
 
 # Assumes the use of a POSIX shell and
-# the presence of AWK (Gawk) and Git,
+# the presence of Gawk (AWK) and Git,
 # plus fold, grep, head, ls, sed,
 # tail and tr
 
@@ -237,7 +237,7 @@ function defaults_set() {
 
 # return name and version number from pipeline run
 function core_info_get() {
-  "head -n 3 $(command -v glep) | tail -n 1 | awk '{ print $2 \" \" $3}'" | getline core_info
+  "head -n 3 $(command -v glep) | tail -n 1 | gawk '{ print $2 \" \" $3}'" | getline core_info
   return core_info
 }
 

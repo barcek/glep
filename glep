@@ -1,6 +1,6 @@
 #!/usr/bin/gawk -f
 
-# glep v1.16.5
+# glep v1.17.0
 # ©2023 barcek
 # License: MIT
 # @ github.com
@@ -312,12 +312,26 @@ function txt_help_get() {
   return txt_title txt_usage txt_terms txt_flags txt_smry txt_ctxt
 }
 
+function note(msg) {
+  print msg > "/dev/stderr"
+}
+
 function test_case_run(desc, glep, expt) {
+  count_case++
   glep | getline rslt
-  print rslt == expt ? "PASS: " desc : "FAIL: " desc " | expected " rslt " to equal " expt
+  if(rslt == expt) {
+    count_pass++
+    note("✓ PASS: " desc)
+  }
+  else {
+    note("✕ FAIL: " desc " | expected " rslt " to equal " expt)
+  }
 }
 
 function test_perform() {
+
+  count_case = 0
+  count_pass = 0
 
   glep_log_base      = "glep =preview a b"
   expt_log_base      = "cd ../ && ls -a | grep -E '^.git$' > /dev/null && matches=$(git log --branches=* --oneline --format=\"%S | %as %an | %h %s\" | grep --color=always \"a\" | grep --color=always \"b\") && cd - > /dev/null && echo \"$matches\" | glep -v stage=echo -v path=../"
@@ -374,19 +388,29 @@ function test_perform() {
   test_case_run("log/word/std",  glep_log_word_std,  expt_log_word_std)
   test_case_run("log/word/alt",  glep_log_word_alt,  expt_log_word_alt)
   test_case_run("log/char",      glep_log_char,      expt_log_char)
+  note("---------------------")
   test_case_run("show/base",     glep_show_base,     expt_show_base)
   test_case_run("show/word/std", glep_show_word_std, expt_show_word_std)
   test_case_run("show/word/alt", glep_show_word_alt, expt_show_word_alt)
   test_case_run("show/char",     glep_show_char,     expt_show_char)
+  note("---------------------")
   test_case_run("list/word",     glep_list_word,     expt_list_word)
   test_case_run("list/char",     glep_list_char,     expt_list_char)
+  note("---------------------")
   test_case_run("str/fail/none", glep_str_fail_none, expt_str_fail_none)
+  note("---------------------")
   test_case_run("str/v/c/full",  glep_str_v_c_full,  expt_str_v_c_full)
   test_case_run("str/v/w/full",  glep_str_v_w_full,  expt_str_v_w_full)
+  note("--------------------")
   test_case_run("str/h/c/form",  glep_str_h_c_form,  expt_str_h_c_form)
   test_case_run("str/h/c/ln_c",  glep_str_h_c_ln_c,  expt_str_h_c_ln_c)
   test_case_run("str/h/w/form",  glep_str_h_w_form,  expt_str_h_w_form)
   test_case_run("str/h/w/ln_c",  glep_str_h_w_ln_c,  expt_str_h_w_ln_c)
+  note("--------------------")
 
-  exit 0
+  summary = count_pass "/" count_case
+  is_pass = count_pass ==  count_case
+
+  note(is_pass ? "✓ " summary : "✕ " summary)
+  exit is_pass ? 0 : 1
 }
